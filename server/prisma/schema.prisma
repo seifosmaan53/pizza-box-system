@@ -1,0 +1,295 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  VIEWER
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  CANCELLED
+  OVERDUE
+}
+
+enum TransactionType {
+  MANUAL_ADD
+  MANUAL_REMOVE
+  INVOICE_DEDUCTION
+  INVOICE_RESTORE
+  ADJUSTMENT
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         Role      @default(VIEWER)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  invoices              Invoice[]
+  inventoryTransactions InventoryTransaction[]
+  auditLogs             AuditLog[]
+  passwordResetTokens   PasswordResetToken[]
+
+  @@index([email])
+  @@index([isActive])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
+
+model Store {
+  id                 String   @id @default(uuid())
+  name               String   @unique
+  contactName        String?
+  email              String?
+  phone              String?
+  address            String?
+  city               String?
+  state              String?
+  zipCode            String?
+  currency           String   @default("USD")
+  taxRate            Float    @default(0)
+  defaultShippingFee Decimal  @default(0) @db.Decimal(10, 2)
+  notes              String?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  inventoryItems InventoryItem[]
+  invoices       Invoice[]
+  productStock   ProductStock[]
+
+  @@index([isActive])
+}
+
+model BoxType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  inventoryItems InventoryItem[]
+
+  @@index([isActive])
+}
+
+model BoxSize {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  dimensions  String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  inventoryItems InventoryItem[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model InventoryItem {
+  id                String   @id @default(uuid())
+  storeId           String
+  store             Store    @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  boxTypeId         String
+  boxType           BoxType  @relation(fields: [boxTypeId], references: [id], onDelete: Restrict)
+  boxSizeId         String
+  boxSize           BoxSize  @relation(fields: [boxSizeId], references: [id], onDelete: Restrict)
+  quantity          Int      @default(0)
+  reservedQty       Int      @default(0)
+  pricePerUnit      Decimal  @db.Decimal(10, 2)
+  lowStockThreshold Int      @default(20)
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  invoiceLineItems      InvoiceLineItem[]
+  inventoryTransactions InventoryTransaction[]
+
+  @@unique([storeId, boxTypeId, boxSizeId])
+  @@index([storeId])
+  @@index([boxTypeId])
+  @@index([boxSizeId])
+  @@index([quantity])
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  invoiceNumber String        @unique
+  storeId       String
+  store         Store         @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  status        InvoiceStatus @default(DRAFT)
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime
+  paidAt        DateTime?
+  currency      String
+  taxRate       Float
+  subtotal      Decimal       @db.Decimal(10, 2)
+  taxAmount     Decimal       @db.Decimal(10, 2)
+  shippingFee   Decimal       @default(0) @db.Decimal(10, 2)
+  total         Decimal       @db.Decimal(10, 2)
+  notes         String?
+  internalNotes String?
+  createdById   String
+  createdBy     User          @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  lineItems    InvoiceLineItem[]
+  auditLogs    AuditLog[]
+  transactions InventoryTransaction[]
+
+  @@index([storeId])
+  @@index([status])
+  @@index([issueDate])
+  @@index([dueDate])
+  @@index([createdById])
+}
+
+model InvoiceLineItem {
+  id              String         @id @default(uuid())
+  invoiceId       String
+  invoice         Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  productId       String?
+  product         Product?       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  description     String
+  boxTypeSnapshot String
+  boxSizeSnapshot String
+  quantityOrdered Int
+  unitPrice       Decimal        @db.Decimal(10, 2)
+  lineTotal       Decimal        @db.Decimal(10, 2)
+
+  @@index([invoiceId])
+  @@index([inventoryItemId])
+  @@index([productId])
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  sku         String?  @unique
+  category    String?
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  stock     ProductStock[]
+  lineItems InvoiceLineItem[]
+
+  @@index([isActive])
+  @@index([sku])
+}
+
+model ProductStock {
+  id                String   @id @default(uuid())
+  productId         String
+  product           Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  storeId           String
+  store             Store    @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  quantity          Int      @default(0)
+  lowStockThreshold Int      @default(20)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  transactions InventoryTransaction[]
+
+  @@unique([productId, storeId])
+  @@index([productId])
+  @@index([storeId])
+}
+
+model InventoryTransaction {
+  id              String          @id @default(uuid())
+  inventoryItemId String?
+  inventoryItem   InventoryItem?  @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  productStockId  String?
+  productStock    ProductStock?   @relation(fields: [productStockId], references: [id], onDelete: Restrict)
+  type            TransactionType
+  quantityBefore  Int
+  quantityChange  Int
+  quantityAfter   Int
+  invoiceId       String?
+  invoice         Invoice?        @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  note            String?
+  performedById   String
+  performedBy     User            @relation(fields: [performedById], references: [id], onDelete: Restrict)
+  createdAt       DateTime        @default(now())
+
+  @@index([inventoryItemId])
+  @@index([productStockId])
+  @@index([type])
+  @@index([invoiceId])
+  @@index([performedById])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  action        String
+  entityType    String
+  entityId      String
+  entityLabel   String
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  ipAddress     String?
+  changeDetails Json     @default("{}")
+  invoiceId     String?
+  invoice       Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model InvoiceCounter {
+  id      String @id @default("counter")
+  year    Int
+  lastSeq Int    @default(0)
+}
+
+model AppSettings {
+  id              String   @id @default("settings")
+  companyName     String   @default("Pizza Box Co")
+  logoUrl         String?
+  defaultCurrency String   @default("USD")
+  defaultTaxRate  Float    @default(0)
+  invoicePrefix   String   @default("INV")
+  lowStockGlobal  Int      @default(20)
+  updatedAt       DateTime @updatedAt
+}
