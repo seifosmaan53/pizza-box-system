@@ -29,7 +29,8 @@ function CompanySettingsTab() {
         lowStockGlobal: data.lowStockGlobal,
       });
     }
-  }, [data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.companyName, data?.defaultCurrency, data?.defaultTaxRate, data?.invoicePrefix, data?.lowStockGlobal]);
 
   const mutation = useMutation({
     mutationFn: updateSettings,

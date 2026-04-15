@@ -90,5 +90,6 @@ export function formatNumber(value: number, decimals = 0): string {
 }
 
 export function formatPercent(value: number, decimals = 1): string {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(decimals)}%`;
+  if (isNaN(value)) return '—';
+  return `${value > 0 ? '+' : ''}${value.toFixed(decimals)}%`;
 }

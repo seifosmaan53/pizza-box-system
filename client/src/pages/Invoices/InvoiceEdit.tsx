@@ -306,7 +306,8 @@ export default function InvoiceEdit() {
         }),
       });
     }
-  }, [invoice, reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoice?.id]);
 
   const inventoryItems: InventoryItem[] = inventoryQuery.data ?? [];
   const boxTypes: BoxType[] = boxTypesQuery.data ?? [];

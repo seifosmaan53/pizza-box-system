@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, useFieldArray, Controller, Control, UseFormWatch, UseFormSetValue, FieldErrors } from 'react-hook-form';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
-import { UnsavedChangesDialog } from '@/components/ui/UnsavedChangesDialog';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Trash2, AlertTriangle, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -387,7 +386,7 @@ export default function InvoiceCreate() {
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'lineItems' });
-  const blocker = useUnsavedChanges(isDirty);
+  useUnsavedChanges(isDirty);
 
   const storeId = watch('storeId');
   const lineItems = watch('lineItems');
@@ -422,6 +421,7 @@ export default function InvoiceCreate() {
   const storeDefaultShippingFee = parseFloat(String(selectedStore?.defaultShippingFee ?? '0')) || 0;
 
   // Update tax/shipping defaults when store changes
+  // Depend on storeId (primitive) instead of selectedStore (object ref) to avoid infinite re-renders
   useEffect(() => {
     if (selectedStore) {
       setApplyTax(taxRate > 0);
@@ -429,7 +429,8 @@ export default function InvoiceCreate() {
       setApplyShipping(hasShipping);
       setShippingFee(storeDefaultShippingFee);
     }
-  }, [selectedStore, taxRate, storeDefaultShippingFee]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeId]);
 
   const subtotal = lineItems.reduce((sum, li) => sum + li.quantity * li.unitPrice, 0);
   const taxAmount = applyTax ? subtotal * (taxRate / 100) : 0;
@@ -1037,7 +1038,6 @@ export default function InvoiceCreate() {
           </div>
         </div>
       )}
-      <UnsavedChangesDialog blocker={blocker} />
     </div>
   );
 }

@@ -98,7 +98,7 @@ export default function StoreInventory() {
     }
   }
 
-  const selectedStoreName = stores?.data.find((s) => s.id === selectedStoreId)?.name ?? 'store';
+  const selectedStoreName = stores?.data?.find((s) => s.id === selectedStoreId)?.name ?? 'store';
 
   const exportStoreInventory = () => {
     if (!unifiedRows.length) return;

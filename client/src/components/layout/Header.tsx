@@ -14,7 +14,7 @@ const routeTitles: Record<string, string> = {
   '/inventory/box-types': 'Box Types',
   '/inventory/box-sizes': 'Box Sizes',
   '/invoices': 'Invoices',
-  '/invoices/new': 'Create Invoice',
+  '/invoices/create': 'Create Invoice',
   '/analytics': 'Analytics',
   '/settings': 'Settings',
 };
@@ -23,7 +23,7 @@ function getTitle(pathname: string): string {
   if (routeTitles[pathname]) return routeTitles[pathname];
   const segments = pathname.split('/').filter(Boolean);
   if (segments[0] === 'stores' && segments[1]) return 'Store Details';
-  if (segments[0] === 'invoices' && segments[1] === 'new') return 'Create Invoice';
+  if (segments[0] === 'invoices' && segments[1] === 'create') return 'Create Invoice';
   if (segments[0] === 'invoices' && segments[1]) {
     return segments[2] === 'edit' ? 'Edit Invoice' : 'Invoice Details';
   }

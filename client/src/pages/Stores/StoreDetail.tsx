@@ -775,7 +775,7 @@ export default function StoreDetail() {
         <Card padding={false} header={
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-gray-900 dark:text-gray-100">Invoices</h3>
-            <Button size="sm" onClick={() => navigate(`/invoices/new?storeId=${id}`)}>
+            <Button size="sm" onClick={() => navigate(`/invoices/create?storeId=${id}`)}>
               New Invoice
             </Button>
           </div>

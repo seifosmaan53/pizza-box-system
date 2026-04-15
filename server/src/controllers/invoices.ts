@@ -445,9 +445,14 @@ export async function updateInvoice(req: Request, res: Response, next: NextFunct
       subtotal = new Decimal(existing.subtotal.toString());
     }
 
-    const effectiveTaxRate = store.taxRate;
+    const effectiveTaxRate = body.applyTax !== undefined
+      ? (body.applyTax ? store.taxRate : 0)
+      : existing.taxRate;
     const taxAmount = subtotal.times(effectiveTaxRate).dividedBy(100);
-    const total = subtotal.plus(taxAmount);
+    const shippingFee = new Decimal(
+      body.shippingFee !== undefined ? body.shippingFee : existing.shippingFee.toString()
+    );
+    const total = subtotal.plus(taxAmount).plus(shippingFee);
 
     const updated = await prisma.$transaction(async (tx) => {
       if (finalLineItems.length > 0) {
@@ -461,9 +466,10 @@ export async function updateInvoice(req: Request, res: Response, next: NextFunct
           ...(body.dueDate && { dueDate: new Date(body.dueDate) }),
           ...(body.notes !== undefined && { notes: body.notes }),
           ...(body.internalNotes !== undefined && { internalNotes: body.internalNotes }),
+          ...(body.shippingFee !== undefined && { shippingFee: shippingFee.toDecimalPlaces(2).toString() }),
           ...(finalLineItems.length > 0 && {
             currency: store.currency,
-            taxRate: store.taxRate,
+            taxRate: effectiveTaxRate,
             subtotal: subtotal.toDecimalPlaces(2).toString(),
             taxAmount: taxAmount.toDecimalPlaces(2).toString(),
             total: total.toDecimalPlaces(2).toString(),
@@ -534,60 +540,31 @@ export async function sendInvoice(req: Request, res: Response, next: NextFunctio
       );
     }
 
-    // Re-check inventory availability for box items
-    const errors: string[] = [];
-    for (const li of invoice.lineItems) {
-      if (li.inventoryItemId && li.inventoryItem) {
-        if (li.inventoryItem.quantity < li.quantityOrdered) {
-          errors.push(
-            `Insufficient stock for ${li.inventoryItem.boxType.name} ${li.inventoryItem.boxSize.name}: available ${li.inventoryItem.quantity}, required ${li.quantityOrdered}`
-          );
-        }
-      }
-    }
-
-    if (errors.length > 0) {
-      throw new AppError('Insufficient inventory to send invoice', 400, 'INSUFFICIENT_INVENTORY', errors);
-    }
-
-    // Re-check product stock availability
-    const productErrors: string[] = [];
-    for (const li of invoice.lineItems) {
-      if (li.productId) {
-        const productStock = await prisma.productStock.findUnique({
-          where: { productId_storeId: { productId: li.productId, storeId: invoice.storeId } },
-        });
-        const available = productStock?.quantity ?? 0;
-        if (available < li.quantityOrdered) {
-          const productName = li.product?.name ?? 'Unknown product';
-          productErrors.push(
-            `Insufficient stock for ${productName}: available ${available}, required ${li.quantityOrdered}`
-          );
-        }
-      }
-    }
-
-    if (productErrors.length > 0) {
-      throw new AppError('Insufficient product stock to send invoice', 400, 'INSUFFICIENT_PRODUCT_STOCK', productErrors);
-    }
-
+    // Validate stock AND deduct inside a single transaction for atomicity
     const updated = await prisma.$transaction(async (tx) => {
-      // Deduct inventory for box line items
+      // Re-check and deduct box inventory
+      const errors: string[] = [];
       for (const li of invoice.lineItems) {
-        if (li.inventoryItemId && li.inventoryItem) {
-          const before = li.inventoryItem.quantity;
-          const after = before - li.quantityOrdered;
+        if (li.inventoryItemId) {
+          // Read the latest stock inside the transaction
+          const item = await tx.inventoryItem.findUnique({ where: { id: li.inventoryItemId }, include: { boxType: true, boxSize: true } });
+          if (!item || item.quantity < li.quantityOrdered) {
+            errors.push(
+              `Insufficient stock for ${item?.boxType?.name ?? 'Unknown'} ${item?.boxSize?.name ?? ''}: available ${item?.quantity ?? 0}, required ${li.quantityOrdered}`
+            );
+            continue;
+          }
 
+          const after = item.quantity - li.quantityOrdered;
           await tx.inventoryItem.update({
             where: { id: li.inventoryItemId },
             data: { quantity: after },
           });
-
           await tx.inventoryTransaction.create({
             data: {
               inventoryItemId: li.inventoryItemId,
               type: 'INVOICE_DEDUCTION',
-              quantityBefore: before,
+              quantityBefore: item.quantity,
               quantityChange: -li.quantityOrdered,
               quantityAfter: after,
               invoiceId: id,
@@ -597,35 +574,42 @@ export async function sendInvoice(req: Request, res: Response, next: NextFunctio
           });
         }
 
-        // Deduct product stock if applicable
+        // Re-check and deduct product stock
         if (li.productId) {
           const productStock = await tx.productStock.findUnique({
             where: { productId_storeId: { productId: li.productId, storeId: invoice.storeId } },
           });
-
-          if (productStock && productStock.quantity >= li.quantityOrdered) {
-            const psBefore = productStock.quantity;
-            const psAfter = psBefore - li.quantityOrdered;
-
-            await tx.productStock.update({
-              where: { id: productStock.id },
-              data: { quantity: psAfter },
-            });
-
-            await tx.inventoryTransaction.create({
-              data: {
-                productStockId: productStock.id,
-                type: 'INVOICE_DEDUCTION',
-                quantityBefore: psBefore,
-                quantityChange: -li.quantityOrdered,
-                quantityAfter: psAfter,
-                invoiceId: id,
-                note: `Deducted for invoice ${invoice.invoiceNumber}`,
-                performedById: req.user!.userId,
-              },
-            });
+          const available = productStock?.quantity ?? 0;
+          if (available < li.quantityOrdered) {
+            const productName = li.product?.name ?? 'Unknown product';
+            errors.push(
+              `Insufficient stock for ${productName}: available ${available}, required ${li.quantityOrdered}`
+            );
+            continue;
           }
+
+          const psAfter = productStock!.quantity - li.quantityOrdered;
+          await tx.productStock.update({
+            where: { id: productStock!.id },
+            data: { quantity: psAfter },
+          });
+          await tx.inventoryTransaction.create({
+            data: {
+              productStockId: productStock!.id,
+              type: 'INVOICE_DEDUCTION',
+              quantityBefore: productStock!.quantity,
+              quantityChange: -li.quantityOrdered,
+              quantityAfter: psAfter,
+              invoiceId: id,
+              note: `Deducted for invoice ${invoice.invoiceNumber}`,
+              performedById: req.user!.userId,
+            },
+          });
         }
+      }
+
+      if (errors.length > 0) {
+        throw new AppError('Insufficient stock to send invoice', 400, 'INSUFFICIENT_INVENTORY', errors);
       }
 
       return tx.invoice.update({
@@ -876,38 +860,33 @@ export async function deleteInvoice(req: Request, res: Response, next: NextFunct
     const invoice = await prisma.invoice.findUnique({ where: { id } });
     if (!invoice) throw new AppError('Invoice not found', 404, 'NOT_FOUND');
 
-    // Restore inventory if this invoice had deductions (SENT, PAID, OVERDUE)
-    if (['SENT', 'PAID', 'OVERDUE'].includes(invoice.status)) {
-      const deductions = await prisma.inventoryTransaction.findMany({
-        where: { invoiceId: id, type: 'INVOICE_DEDUCTION' },
-      });
-      for (const txn of deductions) {
-        // Restore box inventory
-        if (txn.inventoryItemId) {
-          const item = await prisma.inventoryItem.findUnique({ where: { id: txn.inventoryItemId } });
-          if (item) {
-            await prisma.inventoryItem.update({
-              where: { id: item.id },
-              data: { quantity: item.quantity + Math.abs(txn.quantityChange) },
+    // Wrap restore + delete in a single transaction for atomicity
+    await prisma.$transaction(async (tx) => {
+      // Restore inventory if this invoice had deductions (SENT, PAID, OVERDUE)
+      if (['SENT', 'PAID', 'OVERDUE'].includes(invoice.status)) {
+        const deductions = await tx.inventoryTransaction.findMany({
+          where: { invoiceId: id, type: 'INVOICE_DEDUCTION' },
+        });
+        for (const txn of deductions) {
+          if (txn.inventoryItemId) {
+            await tx.inventoryItem.update({
+              where: { id: txn.inventoryItemId },
+              data: { quantity: { increment: Math.abs(txn.quantityChange) } },
             });
           }
-        }
-        // Restore product stock
-        if (txn.productStockId) {
-          const ps = await prisma.productStock.findUnique({ where: { id: txn.productStockId } });
-          if (ps) {
-            await prisma.productStock.update({
-              where: { id: ps.id },
-              data: { quantity: ps.quantity + Math.abs(txn.quantityChange) },
+          if (txn.productStockId) {
+            await tx.productStock.update({
+              where: { id: txn.productStockId },
+              data: { quantity: { increment: Math.abs(txn.quantityChange) } },
             });
           }
         }
       }
-    }
 
-    // Delete related records then the invoice
-    await prisma.inventoryTransaction.deleteMany({ where: { invoiceId: id } });
-    await prisma.invoiceLineItem.deleteMany({ where: { invoiceId: id } });
+      await tx.inventoryTransaction.deleteMany({ where: { invoiceId: id } });
+      await tx.invoiceLineItem.deleteMany({ where: { invoiceId: id } });
+      await tx.invoice.delete({ where: { id } });
+    });
 
     await createAuditLog({
       action: 'INVOICE_DELETED',
@@ -918,8 +897,6 @@ export async function deleteInvoice(req: Request, res: Response, next: NextFunct
       ipAddress: req.ip,
       changeDetails: { status: invoice.status, total: invoice.total.toString() },
     });
-
-    await prisma.invoice.delete({ where: { id } });
 
     res.json({ success: true, message: 'Invoice deleted successfully' });
   } catch (err) {
@@ -944,6 +921,7 @@ export async function downloadPDF(req: Request, res: Response, next: NextFunctio
                 boxSize: { select: { id: true, name: true } },
               },
             },
+            product: { select: { id: true, name: true } },
           },
         },
       },
@@ -968,7 +946,7 @@ export async function downloadPDF(req: Request, res: Response, next: NextFunctio
       .map(
         (li) => `
         <tr>
-          <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb;">${li.boxTypeSnapshot} ${li.boxSizeSnapshot}</td>
+          <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb;">${li.boxTypeSnapshot && li.boxSizeSnapshot ? `${li.boxTypeSnapshot} ${li.boxSizeSnapshot}` : li.description || '—'}</td>
           <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${li.quantityOrdered}</td>
           <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${invoice.currency} ${new Decimal(li.unitPrice.toString()).toFixed(2)}</td>
           <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${invoice.currency} ${new Decimal(li.lineTotal.toString()).toFixed(2)}</td>

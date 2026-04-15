@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -96,10 +96,12 @@ export default function InvoiceDetail() {
 
   // Sync internal notes when invoice data loads
   const prevInvoiceId = useRef<string | null>(null);
-  if (invoice && prevInvoiceId.current !== invoice.id) {
-    prevInvoiceId.current = invoice.id;
-    setInternalNotes(invoice.internalNotes ?? '');
-  }
+  useEffect(() => {
+    if (invoice && prevInvoiceId.current !== invoice.id) {
+      prevInvoiceId.current = invoice.id;
+      setInternalNotes(invoice.internalNotes ?? '');
+    }
+  }, [invoice?.id, invoice?.internalNotes]);
 
   const sendMut = useMutation({
     mutationFn: () => invoicesApi.sendInvoice(id!),

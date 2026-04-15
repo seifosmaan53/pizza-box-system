@@ -15,7 +15,7 @@ import { loginRateLimiter, forgotPasswordRateLimiter } from '../middleware/rateL
 const router = Router();
 
 router.post('/login', loginRateLimiter, login);
-router.post('/refresh', refresh);
+router.post('/refresh', loginRateLimiter, refresh);
 router.post('/logout', optionalAuth, logout);
 router.post('/forgot-password', forgotPasswordRateLimiter, forgotPassword);
 router.post('/reset-password/:token', resetPassword);

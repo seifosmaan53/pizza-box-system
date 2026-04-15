@@ -27,7 +27,8 @@ export default function Profile() {
     if (user) {
       setProfileForm({ firstName: user.firstName, lastName: user.lastName });
     }
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const profileMutation = useMutation({
     mutationFn: () => authApi.updateProfile(profileForm),

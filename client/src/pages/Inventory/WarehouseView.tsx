@@ -525,7 +525,7 @@ export default function WarehouseView() {
                 required
               >
                 <option value="">Select store…</option>
-                {stores?.data.map(s => (
+                {stores?.data?.map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
