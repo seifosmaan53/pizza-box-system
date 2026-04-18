@@ -174,6 +174,8 @@ export interface Invoice {
   dueDate: string;
   paidAt: string | null;
   sentAt: string | null;
+  cancelledAt: string | null;
+  overdueAt: string | null;
   notes: string | null;
   internalNotes: string | null;
   lineItems: InvoiceLineItem[];

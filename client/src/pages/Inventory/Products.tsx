@@ -19,6 +19,12 @@ import type { Product, ProductStock, Store } from '@/types';
 
 // ─── Stock Panel ──────────────────────────────────────────────────────────────
 
+/** Strip leading zeros from a numeric string, keeping at least one digit */
+function stripLeadingZeros(value: string): string {
+  if (value === '' || value === '0') return value;
+  return value.replace(/^0+/, '') || '0';
+}
+
 interface StockPanelProps {
   product: Product;
   onClose: () => void;
@@ -155,7 +161,7 @@ function StockPanel({ product, onClose, canManage }: StockPanelProps) {
                             type="number"
                             min={0}
                             value={editQty}
-                            onChange={(e) => setEditQty(e.target.value)}
+                            onChange={(e) => setEditQty(stripLeadingZeros(e.target.value))}
                             autoFocus
                             className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
                           />
@@ -166,7 +172,7 @@ function StockPanel({ product, onClose, canManage }: StockPanelProps) {
                             type="number"
                             min={0}
                             value={editThreshold}
-                            onChange={(e) => setEditThreshold(e.target.value)}
+                            onChange={(e) => setEditThreshold(stripLeadingZeros(e.target.value))}
                             className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
                           />
                         </div>

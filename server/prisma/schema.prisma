@@ -151,7 +151,10 @@ model Invoice {
   status        InvoiceStatus @default(DRAFT)
   issueDate     DateTime      @default(now())
   dueDate       DateTime
+  sentAt        DateTime?
   paidAt        DateTime?
+  cancelledAt   DateTime?
+  overdueAt     DateTime?
   currency      String
   taxRate       Float
   subtotal      Decimal       @db.Decimal(10, 2)
@@ -287,6 +290,9 @@ model InvoiceCounter {
 model AppSettings {
   id              String   @id @default("settings")
   companyName     String   @default("Pizza Box Co")
+  companyAddress  String?
+  companyEmail    String?
+  companyPhone    String?
   logoUrl         String?
   defaultCurrency String   @default("USD")
   defaultTaxRate  Float    @default(0)

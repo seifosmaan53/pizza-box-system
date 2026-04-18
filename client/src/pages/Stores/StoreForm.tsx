@@ -8,6 +8,22 @@ import { Button } from '@/components/ui/Button';
 import { US_STATES } from '@/utils/constants';
 import type { Store } from '@/types';
 
+// Strip everything except digits from a phone string
+function digitsOnly(value: string): string {
+  return value.replace(/\D/g, '');
+}
+
+// Format a digit string as (xxx) xxx-xxxx
+function formatPhone(value: string): string {
+  const digits = digitsOnly(value);
+  if (digits.length === 0) return '';
+  if (digits.length <= 3) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+}
+
+const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
+
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   address: z.string().optional(),
@@ -16,7 +32,10 @@ const schema = z.object({
   zipCode: z.string().optional(),
   contactName: z.string().optional(),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
-  phone: z.string().optional(),
+  phone: z.string()
+    .refine((v) => !v || phoneRegex.test(v), { message: 'Phone must be a valid US number: (xxx) xxx-xxxx' })
+    .optional()
+    .or(z.literal('')),
   taxRate: z.number().min(0).max(100).optional(),
   defaultShippingFee: z.number().min(0).optional(),
 });
@@ -54,7 +73,7 @@ export function StoreForm({
       zipCode: defaultValues?.zipCode ?? '',
       contactName: defaultValues?.contactName ?? '',
       email: defaultValues?.email ?? '',
-      phone: defaultValues?.phone ?? '',
+      phone: defaultValues?.phone ? formatPhone(defaultValues.phone) : '',
       taxRate: defaultValues?.taxRate ?? 0,
       defaultShippingFee: defaultValues?.defaultShippingFee ? Number(defaultValues.defaultShippingFee) : 0,
     },
@@ -122,8 +141,13 @@ export function StoreForm({
               label="Contact Phone"
               type="tel"
               error={errors.phone?.message}
-              placeholder="+1 (555) 000-0000"
-              {...register('phone')}
+              placeholder="(555) 000-0000"
+              maxLength={14}
+              value={watch('phone') ?? ''}
+              onChange={(e) => {
+                const formatted = formatPhone(e.target.value);
+                setValue('phone', formatted, { shouldValidate: true });
+              }}
             />
           </div>
         </div>

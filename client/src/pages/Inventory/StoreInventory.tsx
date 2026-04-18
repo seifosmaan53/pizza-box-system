@@ -31,6 +31,12 @@ interface UnifiedRow {
   productStockItem?: ProductStock;
 }
 
+/** Strip leading zeros from a numeric string, keeping at least one digit */
+function stripLeadingZeros(value: string): string {
+  if (value === '' || value === '0') return value;
+  return value.replace(/^0+/, '') || '0';
+}
+
 interface AdjustForm {
   type: 'MANUAL_ADD' | 'MANUAL_REMOVE' | 'ADJUSTMENT';
   quantityChange: string;
@@ -303,7 +309,7 @@ export default function StoreInventory() {
                       <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Low Stock At</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Price/Unit</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                      {(canAdjustInventory || canDeleteInventoryItem) && <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Actions</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -349,6 +355,7 @@ export default function StoreInventory() {
                               <Badge color="green" size="sm">OK</Badge>
                             )}
                           </td>
+                          {(canAdjustInventory || canDeleteInventoryItem) && (
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-center gap-2">
                               {canAdjustInventory && (
@@ -387,6 +394,7 @@ export default function StoreInventory() {
                               )}
                             </div>
                           </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -439,7 +447,7 @@ export default function StoreInventory() {
                 type="number"
                 min="1"
                 value={adjustForm.quantityChange}
-                onChange={e => setAdjustForm(f => ({ ...f, quantityChange: e.target.value }))}
+                onChange={e => setAdjustForm(f => ({ ...f, quantityChange: stripLeadingZeros(e.target.value) }))}
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
                 required
                 autoFocus

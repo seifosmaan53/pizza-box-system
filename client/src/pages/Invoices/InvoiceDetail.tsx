@@ -12,9 +12,13 @@ import {
   Clock,
   User,
   Copy,
+  Printer,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { invoicesApi } from '@/api/invoices';
+import { getSettings } from '@/api/settings';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAuthStore } from '@/store/auth';
 import Skeleton from '@/components/ui/Skeleton';
@@ -90,6 +94,11 @@ export default function InvoiceDetail() {
     queryKey: ['invoice', id],
     queryFn: () => invoicesApi.getInvoice(id!),
     enabled: !!id,
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: getSettings,
   });
 
   const invoice: Invoice | undefined = query.data;
@@ -169,8 +178,11 @@ export default function InvoiceDetail() {
     setConfirm(null);
   };
 
+  const [pdfLoading, setPdfLoading] = useState(false);
+
   const handleDownloadPDF = async () => {
-    if (!invoice) return;
+    if (!invoice || pdfLoading) return;
+    setPdfLoading(true);
     try {
       const blob = await invoicesApi.downloadPDF(id!);
       const url = URL.createObjectURL(blob);
@@ -181,6 +193,29 @@ export default function InvoiceDetail() {
       URL.revokeObjectURL(url);
     } catch {
       toast.error('Failed to download PDF');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    if (!invoice || pdfLoading) return;
+    setPdfLoading(true);
+    try {
+      const blob = await invoicesApi.downloadPDF(id!);
+      const url = URL.createObjectURL(blob);
+      const printWindow = window.open(url);
+      if (printWindow) {
+        printWindow.addEventListener('load', () => {
+          printWindow.print();
+        });
+      }
+      // Don't revoke immediately — the print window needs it
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch {
+      toast.error('Failed to load invoice for printing');
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -268,10 +303,19 @@ export default function InvoiceDetail() {
               )}
               <button
                 onClick={handleDownloadPDF}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                disabled={pdfLoading}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Download className="w-4 h-4" />
+                {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 PDF
+              </button>
+              <button
+                onClick={handlePrint}
+                disabled={pdfLoading}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Printer className="w-4 h-4" />
+                Print
               </button>
             </>
           )}
@@ -282,10 +326,19 @@ export default function InvoiceDetail() {
               <span className="text-sm text-gray-500 dark:text-gray-400 italic">Read only</span>
               <button
                 onClick={handleDownloadPDF}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                disabled={pdfLoading}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Download className="w-4 h-4" />
+                {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 PDF
+              </button>
+              <button
+                onClick={handlePrint}
+                disabled={pdfLoading}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Printer className="w-4 h-4" />
+                Print
               </button>
             </>
           )}
@@ -313,10 +366,19 @@ export default function InvoiceDetail() {
               )}
               <button
                 onClick={handleDownloadPDF}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                disabled={pdfLoading}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Download className="w-4 h-4" />
+                {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 PDF
+              </button>
+              <button
+                onClick={handlePrint}
+                disabled={pdfLoading}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Printer className="w-4 h-4" />
+                Print
               </button>
             </>
           )}
@@ -335,10 +397,19 @@ export default function InvoiceDetail() {
               )}
               <button
                 onClick={handleDownloadPDF}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                disabled={pdfLoading}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Download className="w-4 h-4" />
+                {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 PDF
+              </button>
+              <button
+                onClick={handlePrint}
+                disabled={pdfLoading}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Printer className="w-4 h-4" />
+                Print
               </button>
             </>
           )}
@@ -382,8 +453,24 @@ export default function InvoiceDetail() {
           </div>
         </div>
 
-        {/* Bill to */}
+        {/* From + Bill to */}
         <div className="grid grid-cols-2 gap-8 mb-8">
+          {/* From (company details) */}
+          {settings && (settings.companyAddress || settings.companyEmail || settings.companyPhone) && (
+            <div className="col-span-2 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">From</p>
+              <p className="font-semibold text-gray-900 dark:text-white text-lg">{settings.companyName}</p>
+              {settings.companyAddress && (
+                <p className="text-gray-600 dark:text-gray-400 text-sm">{settings.companyAddress}</p>
+              )}
+              {settings.companyEmail && (
+                <p className="text-gray-500 dark:text-gray-500 text-sm">{settings.companyEmail}</p>
+              )}
+              {settings.companyPhone && (
+                <p className="text-gray-500 dark:text-gray-500 text-sm">{settings.companyPhone}</p>
+              )}
+            </div>
+          )}
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
               Bill To
@@ -575,8 +662,24 @@ export default function InvoiceDetail() {
             </div>
           )}
 
+          {/* Overdue */}
+          {invoice.overdueAt && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-4 h-4 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Marked Overdue</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatDateTime(invoice.overdueAt)}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">{formatRelativeTime(invoice.overdueAt)}</p>
+              </div>
+            </div>
+          )}
+
           {/* Cancelled */}
-          {invoice.status === 'CANCELLED' && (
+          {invoice.cancelledAt && (
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
                 <XCircle className="w-4 h-4 text-red-500" />
@@ -584,8 +687,9 @@ export default function InvoiceDetail() {
               <div>
                 <p className="text-sm font-medium text-gray-900 dark:text-white">Cancelled</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {formatDateTime(invoice.updatedAt)}
+                  {formatDateTime(invoice.cancelledAt)}
                 </p>
+                <p className="text-xs text-gray-400 mt-0.5">{formatRelativeTime(invoice.cancelledAt)}</p>
               </div>
             </div>
           )}

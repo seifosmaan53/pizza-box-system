@@ -614,7 +614,7 @@ export async function sendInvoice(req: Request, res: Response, next: NextFunctio
 
       return tx.invoice.update({
         where: { id },
-        data: { status: 'SENT' },
+        data: { status: 'SENT', sentAt: new Date() },
         include: {
           store: { select: { id: true, name: true } },
           lineItems: true,
@@ -794,7 +794,7 @@ export async function cancelInvoice(req: Request, res: Response, next: NextFunct
 
       return tx.invoice.update({
         where: { id },
-        data: { status: 'CANCELLED' },
+        data: { status: 'CANCELLED', cancelledAt: new Date() },
         include: { store: { select: { id: true, name: true } } },
       });
     });
@@ -833,7 +833,7 @@ export async function markOverdue(req: Request, res: Response, next: NextFunctio
 
     const updated = await prisma.invoice.update({
       where: { id },
-      data: { status: 'OVERDUE' },
+      data: { status: 'OVERDUE', overdueAt: new Date() },
     });
 
     await createAuditLog({
@@ -931,6 +931,9 @@ export async function downloadPDF(req: Request, res: Response, next: NextFunctio
 
     const settings = await prisma.appSettings.findUnique({ where: { id: 'settings' } });
     const companyName = settings?.companyName || 'Pizza Box Co';
+    const companyAddress = settings?.companyAddress || '';
+    const companyEmail = settings?.companyEmail || '';
+    const companyPhone = settings?.companyPhone || '';
 
     const statusColors: Record<string, string> = {
       DRAFT: '#6b7280',
@@ -997,6 +1000,9 @@ export async function downloadPDF(req: Request, res: Response, next: NextFunctio
     <div class="header">
       <div>
         <div class="company-name">${companyName}</div>
+        ${companyAddress ? `<p style="font-size: 13px; color: #6b7280; margin-top: 4px;">${companyAddress}</p>` : ''}
+        ${companyEmail ? `<p style="font-size: 13px; color: #6b7280;">${companyEmail}</p>` : ''}
+        ${companyPhone ? `<p style="font-size: 13px; color: #6b7280;">${companyPhone}</p>` : ''}
       </div>
       <div class="invoice-title">
         <h1>INVOICE</h1>

@@ -17,12 +17,15 @@ import { formatDateTime } from '@/utils/formatters';
 function CompanySettingsTab() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ['settings'], queryFn: getSettings });
-  const [form, setForm] = useState({ companyName: '', defaultCurrency: 'USD', defaultTaxRate: 0, invoicePrefix: 'INV', lowStockGlobal: 20 });
+  const [form, setForm] = useState({ companyName: '', companyAddress: '', companyEmail: '', companyPhone: '', defaultCurrency: 'USD', defaultTaxRate: 0, invoicePrefix: 'INV', lowStockGlobal: 20 });
 
   useEffect(() => {
     if (data) {
       setForm({
         companyName: data.companyName,
+        companyAddress: data.companyAddress ?? '',
+        companyEmail: data.companyEmail ?? '',
+        companyPhone: data.companyPhone ?? '',
         defaultCurrency: data.defaultCurrency,
         defaultTaxRate: data.defaultTaxRate,
         invoicePrefix: data.invoicePrefix,
@@ -30,7 +33,7 @@ function CompanySettingsTab() {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data?.companyName, data?.defaultCurrency, data?.defaultTaxRate, data?.invoicePrefix, data?.lowStockGlobal]);
+  }, [data?.companyName, data?.companyAddress, data?.companyEmail, data?.companyPhone, data?.defaultCurrency, data?.defaultTaxRate, data?.invoicePrefix, data?.lowStockGlobal]);
 
   const mutation = useMutation({
     mutationFn: updateSettings,
@@ -43,6 +46,11 @@ function CompanySettingsTab() {
   return (
     <div className="max-w-lg space-y-4">
       <Input label="Company Name" value={form.companyName} onChange={(e) => setForm((f) => ({ ...f, companyName: e.target.value }))} />
+      <Input label="Company Address" value={form.companyAddress} onChange={(e) => setForm((f) => ({ ...f, companyAddress: e.target.value }))} placeholder="Street address, City, State, ZIP" />
+      <div className="grid grid-cols-2 gap-3">
+        <Input label="Company Email" type="email" value={form.companyEmail} onChange={(e) => setForm((f) => ({ ...f, companyEmail: e.target.value }))} placeholder="billing@company.com" />
+        <Input label="Company Phone" value={form.companyPhone} onChange={(e) => setForm((f) => ({ ...f, companyPhone: e.target.value }))} placeholder="(555) 000-0000" />
+      </div>
       <Input label="Currency" value="USD — US Dollar" disabled helperText="All transactions are in US Dollars" />
       <Input label="Default Tax Rate (%)" type="number" step="0.01" min={0} max={100} value={form.defaultTaxRate}
         onChange={(e) => setForm((f) => ({ ...f, defaultTaxRate: parseFloat(e.target.value) }))} />

@@ -16,6 +16,7 @@ import { Modal } from '@/components/ui/Modal';
 import { QUERY_KEYS } from '@/utils/constants';
 import { cn } from '@/utils/cn';
 import { downloadCsv } from '@/utils/exportCsv';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { InventoryItem, Product, ApiError } from '@/types';
 
 interface DrilldownCell {
@@ -40,11 +41,17 @@ const defaultForm: AddStockForm = {
   storeId: '',
   boxTypeId: '',
   boxSizeId: '',
-  quantity: '0',
+  quantity: '',
   pricePerUnit: '',
   lowStockThreshold: '20',
   notes: '',
 };
+
+/** Strip leading zeros from a numeric string, keeping at least one digit */
+function stripLeadingZeros(value: string): string {
+  if (value === '' || value === '0') return value;
+  return value.replace(/^0+/, '') || '0';
+}
 
 export default function WarehouseView() {
   const [drilldown, setDrilldown] = useState<DrilldownCell | null>(null);
@@ -53,6 +60,7 @@ export default function WarehouseView() {
   const [formError, setFormError] = useState('');
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { canCreateInventoryItem } = usePermissions();
 
   const { data: matrix, isLoading } = useQuery({
     queryKey: [QUERY_KEYS.warehouseView],
@@ -178,6 +186,7 @@ export default function WarehouseView() {
               <ArrowRightLeft className="h-4 w-4" />
               Store View
             </button>
+            {canCreateInventoryItem && (
             <button
               onClick={() => { setForm(defaultForm); setFormError(''); setAddOpen(true); }}
               className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors"
@@ -185,6 +194,7 @@ export default function WarehouseView() {
               <Plus className="h-4 w-4" />
               Add Stock
             </button>
+            )}
           </div>
         }
       />
@@ -198,6 +208,7 @@ export default function WarehouseView() {
           <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
             <Warehouse className="h-12 w-12 opacity-40" />
             <p>No inventory data available</p>
+            {canCreateInventoryItem && (
             <button
               onClick={() => { setForm(defaultForm); setFormError(''); setAddOpen(true); }}
               className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors"
@@ -205,6 +216,7 @@ export default function WarehouseView() {
               <Plus className="h-4 w-4" />
               Add first stock item
             </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -576,8 +588,9 @@ export default function WarehouseView() {
                   type="number"
                   min="0"
                   value={form.quantity}
-                  onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
+                  onChange={e => setForm(f => ({ ...f, quantity: stripLeadingZeros(e.target.value) }))}
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="0"
                   required
                 />
               </div>
@@ -606,7 +619,7 @@ export default function WarehouseView() {
                   type="number"
                   min="0"
                   value={form.lowStockThreshold}
-                  onChange={e => setForm(f => ({ ...f, lowStockThreshold: e.target.value }))}
+                  onChange={e => setForm(f => ({ ...f, lowStockThreshold: stripLeadingZeros(e.target.value) }))}
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>

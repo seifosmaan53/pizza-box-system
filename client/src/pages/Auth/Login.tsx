@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Pizza, Mail, Lock } from 'lucide-react';
+import { Pizza, Mail, Lock, AlertCircle } from 'lucide-react';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/auth';
 import type { ApiError } from '@/types';
@@ -24,6 +24,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setAccessToken, setUser } = useAuthStore();
+  const [loginError, setLoginError] = useState<string | null>(null);
   const searchParams = new URLSearchParams(location.search);
   const rawRedirect = searchParams.get('redirect') || '/';
   // Prevent open redirect attacks — only allow internal paths
@@ -42,6 +43,7 @@ export default function Login() {
   const { mutate: login, isPending } = useMutation({
     mutationFn: authApi.login,
     onSuccess: (data) => {
+      setLoginError(null);
       setAccessToken(data.accessToken);
       setUser(data.user);
       navigate(redirectTo, { replace: true });
@@ -49,16 +51,19 @@ export default function Login() {
     },
     onError: (err: ApiError) => {
       if (err.status === 423) {
-        toast.error('Your account has been locked. Please contact an administrator.');
+        setLoginError('Your account has been locked. Please contact an administrator.');
       } else if (err.status === 401) {
-        toast.error('Invalid email or password.');
+        setLoginError('Invalid email or password. Please check your credentials and try again.');
+      } else if (err.status === 429) {
+        setLoginError('Too many login attempts. Please wait a few minutes and try again.');
       } else {
-        toast.error(err.message || 'Login failed. Please try again.');
+        setLoginError(err.message || 'Login failed. Please try again.');
       }
     },
   });
 
   const onSubmit = (data: FormData) => {
+    setLoginError(null);
     login({ email: data.email, password: data.password });
   };
 
@@ -79,11 +84,18 @@ export default function Login() {
         {/* Card */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {loginError && (
+              <div className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-700 dark:text-red-400">{loginError}</p>
+              </div>
+            )}
             <Input
               label="Email address"
               type="email"
               placeholder="you@example.com"
               required
+              disabled={isPending}
               error={errors.email?.message}
               leftIcon={<Mail className="h-4 w-4" />}
               {...register('email')}
@@ -93,6 +105,7 @@ export default function Login() {
               type="password"
               placeholder="Enter your password"
               required
+              disabled={isPending}
               error={errors.password?.message}
               leftIcon={<Lock className="h-4 w-4" />}
               {...register('password')}

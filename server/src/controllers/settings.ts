@@ -5,6 +5,9 @@ import { createAuditLog } from '../utils/auditLog';
 
 const updateSettingsSchema = z.object({
   companyName: z.string().min(1).optional(),
+  companyAddress: z.string().max(500).optional().nullable(),
+  companyEmail: z.string().email().optional().nullable().or(z.literal('')),
+  companyPhone: z.string().max(30).optional().nullable().or(z.literal('')),
   logoUrl: z.string().url().optional().nullable(),
   defaultCurrency: z.string().length(3).optional(),
   defaultTaxRate: z.number().min(0).max(100).optional(),
