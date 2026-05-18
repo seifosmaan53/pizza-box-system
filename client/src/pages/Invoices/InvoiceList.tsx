@@ -21,6 +21,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import PageHeader from '@/components/ui/PageHeader';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import StatusBadge from '@/components/ui/StatusBadge';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import Skeleton from '@/components/ui/Skeleton';
 import { formatCurrency, formatDate } from '@/utils/formatters';
@@ -30,6 +31,16 @@ import type { Invoice, InvoiceStatus } from '@/types';
 
 const STATUS_COLORS = STATUS_BADGE_COLORS;
 const STATUSES: InvoiceStatus[] = [...INVOICE_STATUSES];
+
+function invoiceError(action: string, e: Error): string {
+  const msg = (e.message ?? '').toLowerCase();
+  if (msg.includes('insufficient') || msg.includes('stock')) return `Cannot ${action}: not enough inventory in stock`;
+  if (msg.includes('already')) return `This invoice is already ${action}d`;
+  if (msg.includes('not found')) return 'Invoice not found — it may have been deleted';
+  if (msg.includes('permission') || msg.includes('unauthorized')) return "You don't have permission to perform this action";
+  if (msg.includes('draft')) return 'Only draft invoices can be edited';
+  return e.message || `Failed to ${action} invoice`;
+}
 
 type ConfirmAction = {
   action: 'send' | 'pay' | 'cancel' | 'delete';
@@ -100,7 +111,7 @@ export default function InvoiceList() {
       toast.success('Invoice sent');
       qc.invalidateQueries({ queryKey: ['invoices'] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(invoiceError('send', e)),
   });
 
   const payMut = useMutation({
@@ -109,7 +120,7 @@ export default function InvoiceList() {
       toast.success('Invoice marked as paid');
       qc.invalidateQueries({ queryKey: ['invoices'] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(invoiceError('pay', e)),
   });
 
   const cancelMut = useMutation({
@@ -118,7 +129,7 @@ export default function InvoiceList() {
       toast.success('Invoice cancelled');
       qc.invalidateQueries({ queryKey: ['invoices'] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(invoiceError('cancel', e)),
   });
 
   const deleteMut = useMutation({
@@ -127,7 +138,7 @@ export default function InvoiceList() {
       toast.success('Invoice deleted');
       qc.invalidateQueries({ queryKey: ['invoices'] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(invoiceError('delete', e)),
   });
 
   const invoices: Invoice[] = invoicesQuery.data?.data ?? [];
@@ -448,7 +459,7 @@ export default function InvoiceList() {
               Showing {invoices.length} of {total} invoices
             </p>
             <table className="w-full text-sm" aria-label="Invoices">
-              <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+              <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                 <tr>
                   <th className="px-4 py-3 text-left w-10">
                     <input
@@ -459,37 +470,37 @@ export default function InvoiceList() {
                       className="rounded border-gray-300 focus:ring-orange-500"
                     />
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Invoice #
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Store
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Issue Date
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Due Date
                   </th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Items
                   </th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Subtotal
                   </th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Tax
                   </th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Total
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Created By
                   </th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Actions
                   </th>
                 </tr>
@@ -539,21 +550,7 @@ export default function InvoiceList() {
                       {formatCurrency(Number(inv.total), inv.currency)}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          inv.status === 'DRAFT'
-                            ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-                            : inv.status === 'SENT'
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                            : inv.status === 'PAID'
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : inv.status === 'OVERDUE'
-                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                        }`}
-                      >
-                        {inv.status}
-                      </span>
+                      <StatusBadge status={inv.status} />
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400 text-sm">
                       {inv.createdBy

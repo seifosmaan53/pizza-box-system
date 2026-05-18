@@ -8,6 +8,8 @@ import {
   AlertTriangle,
   TrendingDown,
   ArrowRight,
+  CheckCircle,
+  DollarSign,
 } from 'lucide-react';
 import {
   BarChart,
@@ -31,39 +33,46 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { OnboardingChecklist } from '@/components/ui/OnboardingChecklist';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import type { LowStockItem } from '@/types';
-import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/utils/formatters';
+import { formatCurrency, formatDate } from '@/utils/formatters';
 import { QUERY_KEYS, STATUS_HEX_COLORS } from '@/utils/constants';
 
 export default function Dashboard() {
   const { data: invoiceSummary, isLoading: summaryLoading } = useQuery({
     queryKey: [QUERY_KEYS.invoiceSummary],
     queryFn: () => analyticsApi.getInvoiceSummary(),
+    refetchInterval: 2 * 60 * 1000,
   });
 
   const { data: inventorySnapshot, isLoading: snapshotLoading } = useQuery({
     queryKey: [QUERY_KEYS.inventorySnapshot],
     queryFn: analyticsApi.getInventorySnapshot,
+    refetchInterval: 2 * 60 * 1000,
   });
 
   const { data: topStores, isLoading: topStoresLoading } = useQuery({
     queryKey: [QUERY_KEYS.salesByStore, 'top'],
     queryFn: () => analyticsApi.getTopStores({ limit: 5 }),
+    refetchInterval: 5 * 60 * 1000,
   });
 
   const { data: storesData, isLoading: storesLoading } = useQuery({
     queryKey: [QUERY_KEYS.stores],
     queryFn: () => storesApi.getStores({ limit: 100 }),
+    refetchInterval: 5 * 60 * 1000,
   });
 
   const { data: lowStock, isLoading: lowStockLoading } = useQuery({
     queryKey: [QUERY_KEYS.lowStock],
     queryFn: inventoryApi.getLowStockItems,
+    refetchInterval: 2 * 60 * 1000,
   });
 
   const { data: recentInvoices, isLoading: invoicesLoading } = useQuery({
     queryKey: [QUERY_KEYS.invoices, 'recent'],
     queryFn: () => invoicesApi.getInvoices({ limit: 10, sortBy: 'createdAt', sortOrder: 'desc' }),
+    refetchInterval: 2 * 60 * 1000,
   });
 
   const activeStores = storesData?.data?.filter((s) => s.isActive).length ?? 0;
@@ -96,6 +105,7 @@ export default function Dashboard() {
           label="Total Inventory"
           value={inventorySnapshot?.totalQuantity ?? 0}
           icon={<Package className="h-5 w-5" />}
+          color="blue"
           isLoading={snapshotLoading}
           animateNumber
         />
@@ -103,13 +113,15 @@ export default function Dashboard() {
           label="Active Stores"
           value={activeStores}
           icon={<Store className="h-5 w-5" />}
+          color="green"
           isLoading={storesLoading}
           animateNumber
         />
         <StatCard
           label="Outstanding Value"
           value={formatCurrency(invoiceSummary?.totalOutstanding ?? 0)}
-          icon={<FileText className="h-5 w-5" />}
+          icon={<DollarSign className="h-5 w-5" />}
+          color="purple"
           isLoading={summaryLoading}
           animateNumber={false}
         />
@@ -117,11 +129,7 @@ export default function Dashboard() {
           label="Overdue Invoices"
           value={invoiceSummary?.totalOverdue ?? 0}
           icon={<AlertTriangle className="h-5 w-5" />}
-          iconClassName={
-            (invoiceSummary?.totalOverdue ?? 0) > 0
-              ? 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400'
-              : undefined
-          }
+          color={(invoiceSummary?.totalOverdue ?? 0) > 0 ? 'orange' : 'gray'}
           isLoading={summaryLoading}
           animateNumber
         />
@@ -129,11 +137,7 @@ export default function Dashboard() {
           label="Low Stock Items"
           value={lowStock?.length ?? 0}
           icon={<TrendingDown className="h-5 w-5" />}
-          iconClassName={
-            (lowStock?.length ?? 0) > 0
-              ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400'
-              : undefined
-          }
+          color={(lowStock?.length ?? 0) > 0 ? 'yellow' : 'gray'}
           isLoading={lowStockLoading}
           animateNumber
         />
@@ -190,8 +194,14 @@ export default function Dashboard() {
               <Skeleton className="h-40 w-40 rounded-full" />
             </div>
           ) : pieData.length === 0 ? (
-            <div className="flex items-center justify-center h-52 text-gray-400 text-sm">
-              No invoices yet
+            <div className="flex flex-col items-center justify-center h-52 gap-3 text-center">
+              <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-full">
+                <FileText className="h-7 w-7 text-gray-400 dark:text-gray-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">No invoices yet</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Create one to see the breakdown</p>
+              </div>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
@@ -236,13 +246,13 @@ export default function Dashboard() {
           >
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
+                <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800/50">
                   <tr className="border-b border-gray-100 dark:border-gray-800">
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Invoice</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Store</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Amount</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Due</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Invoice</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Store</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Amount</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Due</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -279,9 +289,7 @@ export default function Dashboard() {
                             {formatDate(inv.dueDate)}
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(inv.status)}`}>
-                              {getStatusLabel(inv.status)}
-                            </span>
+                            <StatusBadge status={inv.status} size="sm" />
                           </td>
                         </tr>
                       ))}
@@ -307,9 +315,14 @@ export default function Dashboard() {
               {[1,2,3,4].map(i => <Skeleton key={i} className="h-12 w-full" />)}
             </div>
           ) : !lowStock?.length ? (
-            <div className="flex flex-col items-center py-8 text-gray-400 gap-2">
-              <Package className="h-8 w-8 opacity-40" />
-              <p className="text-sm">All stock levels are healthy</p>
+            <div className="flex flex-col items-center py-8 gap-3 text-center">
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-full">
+                <CheckCircle className="h-7 w-7 text-green-500 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">All stock healthy</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">No items below threshold</p>
+              </div>
             </div>
           ) : (
             <div className="space-y-2.5">

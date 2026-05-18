@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { Skeleton } from './Skeleton';
+import { EmptyState } from './EmptyState';
 
 export interface Column<T> {
   key: string;
@@ -65,14 +66,14 @@ export function Table<T>({
     <div className="flex flex-col">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr className="border-b border-gray-200 dark:border-gray-700">
               {columns.map((col) => (
                 <th
                   key={col.key}
                   style={col.width ? { width: col.width } : undefined}
                   className={cn(
-                    'px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap bg-gray-50 dark:bg-gray-800/50',
+                    'px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap bg-gray-50 dark:bg-gray-800/50',
                     col.align === 'center'
                       ? 'text-center'
                       : col.align === 'right'
@@ -104,11 +105,8 @@ export function Table<T>({
               : data.length === 0
               ? (
                   <tr>
-                    <td colSpan={columns.length} className="px-4 py-12 text-center">
-                      <div className="flex flex-col items-center gap-2 text-gray-400 dark:text-gray-600">
-                        {emptyIcon}
-                        <span>{emptyMessage}</span>
-                      </div>
+                    <td colSpan={columns.length}>
+                      <EmptyState icon={emptyIcon} title={emptyMessage} />
                     </td>
                   </tr>
                 )

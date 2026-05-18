@@ -5,6 +5,7 @@ import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { authApi } from '@/api/auth';
 import { cn } from '@/utils/cn';
+import { Badge } from '@/components/ui/Badge';
 import toast from 'react-hot-toast';
 
 const routeTitles: Record<string, string> = {
@@ -66,11 +67,8 @@ export function Header({ onMenuClick }: HeaderProps) {
     toast.success('Logged out successfully');
   };
 
-  const roleColor: Record<string, string> = {
-    ADMIN: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    MANAGER: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    VIEWER: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-  };
+  const roleBadgeColor = (role: string): 'red' | 'blue' | 'gray' =>
+    role === 'ADMIN' ? 'red' : role === 'MANAGER' ? 'blue' : 'gray';
 
   return (
     <header className="sticky top-0 z-30 h-16 flex items-center justify-between px-4 md:px-6 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shrink-0">
@@ -121,14 +119,13 @@ export function Header({ onMenuClick }: HeaderProps) {
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{user?.email}</p>
                 {user?.role && (
-                  <span
-                    className={cn(
-                      'inline-flex items-center mt-1.5 px-2 py-0.5 text-xs rounded-full font-medium',
-                      roleColor[user.role] || roleColor.VIEWER
-                    )}
+                  <Badge
+                    color={roleBadgeColor(user.role)}
+                    size="sm"
+                    className="mt-1.5"
                   >
                     {user.role}
-                  </span>
+                  </Badge>
                 )}
               </div>
               <button

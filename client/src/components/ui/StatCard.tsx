@@ -7,7 +7,7 @@ interface StatCardProps {
   label: string;
   value: string | number;
   icon?: React.ReactNode | React.ComponentType<{ className?: string }>;
-  color?: 'red' | 'blue' | 'green' | 'orange' | 'purple' | 'gray';
+  color?: 'red' | 'blue' | 'green' | 'orange' | 'yellow' | 'purple' | 'gray';
   trend?: number; // positive = up, negative = down
   trendLabel?: string;
   isLoading?: boolean;
@@ -19,6 +19,16 @@ interface StatCardProps {
   suffix?: string;
   onClick?: () => void;
 }
+
+const colorIconClasses: Record<NonNullable<StatCardProps['color']>, string> = {
+  red:    'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400',
+  blue:   'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
+  green:  'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400',
+  orange: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400',
+  yellow: 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400',
+  purple: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400',
+  gray:   'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+};
 
 function useCountUp(target: number, duration = 800, enabled = true) {
   const [count, setCount] = useState(0);
@@ -60,8 +70,7 @@ export function StatCard({
   prefix,
   suffix,
   onClick,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  color,
+  color = 'red',
 }: StatCardProps) {
   const numericValue = typeof value === 'number' ? value : parseFloat(String(value).replace(/[^0-9.-]/g, ''));
   const isNumeric = !isNaN(numericValue);
@@ -135,7 +144,8 @@ export function StatCard({
         {icon && (
           <div
             className={cn(
-              'p-3 rounded-xl bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 shrink-0',
+              'p-3 rounded-xl shrink-0',
+              colorIconClasses[color],
               iconClassName
             )}
           >
