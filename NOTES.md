@@ -4,18 +4,18 @@
 
 ### Start everything (recommended)
 ```
-cd /Users/seifosman/pizza-box-system
+cd /Users/seifosman/Desktop/📲\ apps/✅\ 🍕\ pizza-box-system
 docker-compose up
 ```
 
 ### Start manually
 ```
 # Terminal 1 — Server
-cd /Users/seifosman/pizza-box-system/server
+cd /Users/seifosman/Desktop/📲\ apps/✅\ 🍕\ pizza-box-system/server
 npm run dev
 
 # Terminal 2 — Client
-cd /Users/seifosman/pizza-box-system/client
+cd /Users/seifosman/Desktop/📲\ apps/✅\ 🍕\ pizza-box-system/client
 npm run dev
 ```
 
@@ -28,7 +28,7 @@ npm run dev
 Prisma Studio is a visual database browser — **dev only, not available in production**.
 
 ```
-cd /Users/seifosman/pizza-box-system/server
+cd /Users/seifosman/Desktop/📲\ apps/✅\ 🍕\ pizza-box-system/server
 npx prisma studio
 ```
 
@@ -40,7 +40,7 @@ Then open: http://localhost:5555
 When you change the Prisma schema (`server/prisma/schema.prisma`), run:
 
 ```
-cd /Users/seifosman/pizza-box-system/server
+cd /Users/seifosman/Desktop/📲\ apps/✅\ 🍕\ pizza-box-system/server
 npx prisma migrate dev --name describe_your_change
 npx prisma generate
 ```
@@ -52,7 +52,7 @@ The seed script fills the database with fake stores, inventory, invoices and use
 
 **To run it:**
 ```
-cd /Users/seifosman/pizza-box-system/server
+cd /Users/seifosman/Desktop/📲\ apps/✅\ 🍕\ pizza-box-system/server
 npx prisma db seed
 ```
 

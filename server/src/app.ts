@@ -25,6 +25,9 @@ import productsRouter from './routes/products';
 
 const app = express();
 
+// Trust first proxy (nginx) — required for correct client IP in rate limiting & logging
+app.set('trust proxy', 1);
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {

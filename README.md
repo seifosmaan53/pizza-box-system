@@ -39,7 +39,7 @@ cd pizza-box-system
 
 # 2. Set up environment
 cp .env.example .env
-# Edit .env — at minimum set JWT_SECRET and JWT_REFRESH_SECRET
+# Edit .env — required: POSTGRES_PASSWORD, REDIS_PASSWORD, JWT_SECRET, JWT_REFRESH_SECRET
 
 # 3. Start everything
 docker-compose up -d
@@ -59,12 +59,13 @@ The app will be available at:
 
 | Variable | Required | Description | Example |
 |----------|----------|-------------|---------|
+| `POSTGRES_PASSWORD` | ✅ | PostgreSQL password (used by Docker Compose) | `generate with: openssl rand -hex 32` |
 | `DATABASE_URL` | ✅ | PostgreSQL connection string | `postgresql://postgres:pass@localhost:5432/pizzabox` |
 | `JWT_SECRET` | ✅ | Secret for access tokens (min 32 chars) | `generate with: openssl rand -hex 64` |
 | `JWT_REFRESH_SECRET` | ✅ | Secret for refresh tokens (different from JWT_SECRET) | `generate with: openssl rand -hex 64` |
 | `REDIS_HOST` | ✅ | Redis server hostname | `localhost` |
 | `REDIS_PORT` | ✅ | Redis server port | `6379` |
-| `REDIS_PASSWORD` | ❌ | Redis password (if set) | `` |
+| `REDIS_PASSWORD` | ✅ | Redis password (required when using Docker Compose) | `generate with: openssl rand -base64 32` |
 | `PORT` | ❌ | Server port | `3001` |
 | `NODE_ENV` | ❌ | Environment | `development` |
 | `CLIENT_URL` | ❌ | Frontend URL for CORS | `http://localhost:5173` |
@@ -72,6 +73,7 @@ The app will be available at:
 | `INVOICE_PREFIX` | ❌ | Prefix for invoice numbers | `INV` |
 | `SMTP_HOST` | ❌ | SMTP server for password reset emails | `smtp.gmail.com` |
 | `SMTP_PORT` | ❌ | SMTP port | `587` |
+| `SMTP_SECURE` | ❌ | Use TLS for SMTP (`true` for port 465) | `false` |
 | `SMTP_USER` | ❌ | SMTP username | `your@email.com` |
 | `SMTP_PASS` | ❌ | SMTP password or app password | `xxxx xxxx xxxx xxxx` |
 | `EMAIL_FROM` | ❌ | From address for system emails | `noreply@yourcompany.com` |
@@ -212,6 +214,8 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
     }
 }
@@ -267,6 +271,9 @@ The AI assistant appears as a floating chat button in the bottom-right corner of
 ---
 
 ## Troubleshooting
+
+**`Set POSTGRES_PASSWORD in .env` error on `docker-compose up`**
+→ The Docker setup requires explicit passwords. Add `POSTGRES_PASSWORD=your_strong_password` and `REDIS_PASSWORD=your_redis_password` to your `.env` file.
 
 **`DATABASE_URL` error on startup**
 → Make sure PostgreSQL is running and the connection string in `.env` is correct. Test with: `psql $DATABASE_URL`

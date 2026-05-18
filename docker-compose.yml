@@ -6,7 +6,7 @@ services:
     container_name: pizzabox_postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pizzabox123}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: pizzabox
     ports:
       - '5432:5432'
@@ -22,13 +22,13 @@ services:
   redis:
     image: redis:7-alpine
     container_name: pizzabox_redis
-    command: redis-server --requirepass ${REDIS_PASSWORD:-pizzabox_redis_dev}
+    command: redis-server --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
     ports:
       - '6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-pizzabox_redis_dev}', 'ping']
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,10 +41,10 @@ services:
     container_name: pizzabox_server
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-pizzabox123}@postgres:5432/pizzabox
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/pizzabox
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-pizzabox_redis_dev}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
       NODE_ENV: development
     ports:
       - '3001:3001'
