@@ -1,5 +1,8 @@
 # Pizza Box Inventory & Invoicing System
 
+<!--portfolio-note-->
+> **Portfolio note —** one of three invoicing builds I made to explore the same problem with different stacks. **This is the React + Express + Prisma full-stack take.** Siblings: [asset-vault](https://github.com/seifosmaan53/asset-vault) (React 19 + NestJS 11 + tRPC) and [invoiceme](https://github.com/seifosmaan53/invoiceme) (Flutter mobile + NestJS, offline-first).
+
 ![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat&logo=node.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?style=flat&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)
