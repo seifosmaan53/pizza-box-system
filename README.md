@@ -9,11 +9,11 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?style=flat&logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7+-DC382D?style=flat&logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)
-![License](https://img.shields.io/badge/License-Private-red?style=flat)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat)
 
-A production-grade, full-stack web application for managing pizza box inventory across multiple stores, generating professional PDF invoices, and tracking business analytics — with an AI assistant that has live access to all business data.
+A full-stack web application for managing pizza box inventory across multiple stores, generating professional PDF invoices, and tracking business analytics — with an AI assistant that has live, role-aware access to the underlying business data.
 
-Built to solve a real operations problem: a company with US-based stores managed from Egypt needed a centralized, role-aware system that could replace spreadsheets and manual invoicing. The result is a deployable SaaS-style platform with zero compromises on security or reliability.
+**Why this exists.** My day-to-day is retail and pharmacy operations support across an 890-store footprint, where inventory counts and invoicing routinely still live in spreadsheets and hand-built PDFs. This project is my exploration of what a centralized, role-aware replacement looks like: one system where a store's stock, its invoices, and the analytics sitting on top of both stay in sync. It is a portfolio build — one of three I wrote to attack the same domain with different stacks — not a deployed product. But every layer (JWT auth, RBAC, audit logging, Dockerized Postgres/Redis, hard-failing secrets) is built the way I would ship it.
 
 ---
 
@@ -25,6 +25,7 @@ Built to solve a real operations problem: a company with US-based stores managed
 - [Key Engineering Decisions](#key-engineering-decisions)
 - [Security](#security)
 - [Performance](#performance)
+- [Testing](#testing)
 - [Getting Started](#getting-started)
 - [Environment Variables](#environment-variables)
 - [Database](#database)
@@ -60,7 +61,7 @@ Built to solve a real operations problem: a company with US-based stores managed
 │ PostgreSQL  │                  │     Redis       │
 │   Prisma    │                  │  Sessions +     │
 │    ORM      │                  │  Rate limit     │
-│  (10 models │                  │  counters       │
+│  (14 models │                  │  counters       │
 │  + indexes) │                  └────────────────┘
 └─────────────┘
        │
@@ -70,7 +71,7 @@ Built to solve a real operations problem: a company with US-based stores managed
 └─────────────┘
 ```
 
-The backend follows a **controller → service → repository** pattern with strict separation between routing, business logic, and data access. Every request passes through auth verification, role checking, input sanitization, and Zod schema validation before reaching a controller.
+The backend is organized as **routes → middleware → controllers**, with Prisma as the data-access layer. Every request passes through JWT auth verification, role checking (RBAC), input sanitization, and Zod schema validation before it reaches a controller, where the business logic and Prisma queries live. Cross-cutting concerns — rate limiting, audit logging, error handling — are middleware, so they apply uniformly and cannot be forgotten when a new route is added.
 
 ---
 
@@ -215,7 +216,7 @@ The `:?error` syntax in `docker-compose.yml` causes Docker to refuse to start if
 
 ## Performance
 
-- **Database indexes**: 10+ indexes on frequently queried columns (store ID, invoice status, created date, user ID)
+- **Database indexes**: 30+ indexes declared in the Prisma schema on frequently queried columns (store ID, invoice status, created date, user ID)
 - **Redis caching**: Session data and rate limit counters are in-memory, never hitting the DB on every request
 - **TanStack Query**: Aggressive client-side caching with configurable `staleTime`; list and detail queries share normalized cache
 - **Pagination**: All list endpoints paginate — no endpoint loads an unbounded result set
@@ -223,6 +224,26 @@ The `:?error` syntax in `docker-compose.yml` causes Docker to refuse to start if
 - **Prisma select**: Controllers select only the columns they need — no `SELECT *` on large tables
 - **Gzip compression**: Express `compression` middleware applied to all responses
 - **AI streaming**: Nginx buffering disabled on the AI route so the first token appears immediately instead of waiting for the full response
+
+---
+
+## Testing
+
+Two test runners, split by side of the stack:
+
+| Side | Framework | Command | Covers |
+|------|-----------|---------|--------|
+| Server | Jest + ts-jest | `cd server && npm test` | Invoice money math (Decimal.js subtotal/tax/shipping/total), input-sanitization middleware (XSS + control-char stripping), password-policy schema |
+| Client | Vitest + Testing Library | `cd client && npm test` | Onboarding checklist component (step completion, hide-when-complete) |
+
+```bash
+cd server && npm test    # Jest
+cd client && npm test    # Vitest
+```
+
+The server suite deliberately targets the pure, high-consequence logic where a silent bug is most expensive. `utils/invoiceTotals.ts` was extracted from the invoice controllers specifically so the subtotal → tax → shipping → total calculation that **both** invoice creation and update depend on can be unit-tested in isolation — including the floating-point cases (`0.1 + 0.2`) that are the reason every monetary value goes through `Decimal.js` instead of native numbers.
+
+**Honest scope.** This is unit coverage, not end-to-end. The reserved-quantity lifecycle (quantities move into `reservedQuantity` on invoice create, deduct on send, restore on cancel) runs inside Prisma transactions in the controllers and is currently exercised by manual testing and the seed data, not yet by an integration suite against a throwaway test database. Standing that integration layer up is the next thing I would add.
 
 ---
 
@@ -503,7 +524,8 @@ pizza-box-system/
 │   │   ├── routes/                # Express route definitions
 │   │   ├── middleware/            # Auth, RBAC, validation, rate limiting, sanitization
 │   │   ├── jobs/                  # Cron jobs (overdue detection, low-stock snapshots)
-│   │   ├── utils/                 # JWT helpers, audit logger, email, Winston config
+│   │   ├── utils/                 # JWT, audit logger, email, Winston, invoice totals/number
+│   │   ├── __tests__/             # Jest unit tests (invoice totals, sanitize, validation)
 │   │   └── prisma/                # Seed and reset scripts
 │   └── prisma/
 │       ├── schema.prisma          # Database schema (14 models)
@@ -540,4 +562,4 @@ Building this from scratch end-to-end taught me how the pieces of a real product
 
 ## License
 
-Private — all rights reserved. Built by [Seif Osman](https://github.com/seifosmaan53).
+MIT — see [LICENSE](LICENSE). Built by [Seif Osman](https://seifosman.com) ([@seifosmaan53](https://github.com/seifosmaan53)).

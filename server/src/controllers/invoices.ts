@@ -5,6 +5,7 @@ import Decimal from 'decimal.js';
 import puppeteer from 'puppeteer';
 import prisma from '../lib/prisma';
 import { generateInvoiceNumber, peekNextInvoiceNumber } from '../utils/invoiceNumber';
+import { sumLineItems, computeInvoiceTotals } from '../utils/invoiceTotals';
 import { createAuditLog } from '../utils/auditLog';
 import { AppError } from '../middleware/errorHandler';
 import { sendInvoiceEmail, sendInvoicePaidEmail } from '../utils/email';
@@ -245,15 +246,13 @@ export async function createInvoice(req: Request, res: Response, next: NextFunct
       throw new AppError('Line item validation failed', 400, 'LINE_ITEM_VALIDATION_ERROR', errors);
     }
 
-    // Calculate totals
-    let subtotal = new Decimal(0);
-    for (const li of lineItemData) {
-      subtotal = subtotal.plus(li.unitPrice.times(li.quantityOrdered));
-    }
+    // Calculate totals (all Decimal.js — see utils/invoiceTotals)
     const effectiveTaxRate = body.applyTax !== false ? store.taxRate : 0;
-    const taxAmount = subtotal.times(effectiveTaxRate).dividedBy(100);
-    const shippingFee = new Decimal(body.shippingFee ?? 0);
-    const total = subtotal.plus(taxAmount).plus(shippingFee);
+    const { subtotal, taxAmount, shippingFee, total } = computeInvoiceTotals(
+      sumLineItems(lineItemData),
+      effectiveTaxRate,
+      body.shippingFee ?? 0,
+    );
 
     const invoiceNumber = await generateInvoiceNumber();
 
@@ -434,25 +433,22 @@ export async function updateInvoice(req: Request, res: Response, next: NextFunct
       }
     }
 
-    let subtotal = new Decimal(0);
     const finalLineItems = lineItemData.length > 0 ? lineItemData : [];
 
-    if (finalLineItems.length > 0) {
-      for (const li of finalLineItems) {
-        subtotal = subtotal.plus(li.unitPrice.times(li.quantityOrdered));
-      }
-    } else {
-      subtotal = new Decimal(existing.subtotal.toString());
-    }
+    // Recompute the subtotal from the new line items, or keep the existing one
+    // when the update does not touch line items.
+    const baseSubtotal = finalLineItems.length > 0
+      ? sumLineItems(finalLineItems)
+      : new Decimal(existing.subtotal.toString());
 
     const effectiveTaxRate = body.applyTax !== undefined
       ? (body.applyTax ? store.taxRate : 0)
       : existing.taxRate;
-    const taxAmount = subtotal.times(effectiveTaxRate).dividedBy(100);
-    const shippingFee = new Decimal(
-      body.shippingFee !== undefined ? body.shippingFee : existing.shippingFee.toString()
+    const { subtotal, taxAmount, shippingFee, total } = computeInvoiceTotals(
+      baseSubtotal,
+      effectiveTaxRate,
+      body.shippingFee !== undefined ? body.shippingFee : existing.shippingFee.toString(),
     );
-    const total = subtotal.plus(taxAmount).plus(shippingFee);
 
     const updated = await prisma.$transaction(async (tx) => {
       if (finalLineItems.length > 0) {
