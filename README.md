@@ -243,7 +243,7 @@ cd client && npm test    # Vitest
 
 The server suite deliberately targets the pure, high-consequence logic where a silent bug is most expensive. `utils/invoiceTotals.ts` was extracted from the invoice controllers specifically so the subtotal → tax → shipping → total calculation that **both** invoice creation and update depend on can be unit-tested in isolation — including the floating-point cases (`0.1 + 0.2`) that are the reason every monetary value goes through `Decimal.js` instead of native numbers.
 
-**Honest scope.** This is unit coverage, not end-to-end. The reserved-quantity lifecycle (quantities move into `reservedQuantity` on invoice create, deduct on send, restore on cancel) runs inside Prisma transactions in the controllers and is currently exercised by manual testing and the seed data, not yet by an integration suite against a throwaway test database. Standing that integration layer up is the next thing I would add.
+**Honest scope.** This is unit coverage, not end-to-end. The reserved-quantity lifecycle (quantities move into `reservedQuantity` on invoice create, deduct on send, restore on cancel) runs inside Prisma transactions in the controllers and is currently exercised by manual testing, not yet by an integration suite against a throwaway test database. Standing that integration layer up is the next thing I would add.
 
 ---
 
@@ -280,9 +280,9 @@ JWT_REFRESH_SECRET= # generate: openssl rand -hex 64  (must differ from JWT_SECR
 # 3. Start all services (PostgreSQL, Redis, API, frontend)
 docker-compose up -d
 
-# 4. Run migrations and seed demo data
+# 4. Run migrations and create the default admin login
 docker exec pizzabox_server npm run prisma:migrate
-docker exec pizzabox_server npm run prisma:seed
+docker exec pizzabox_server npm run prisma:reset
 ```
 
 **App is now running:**
@@ -292,13 +292,13 @@ docker exec pizzabox_server npm run prisma:seed
 
 ### Default Login Credentials
 
-> **Change these immediately. Do not use in production.**
+The reset script creates a single ADMIN account so you can log in; add any MANAGER/VIEWER users from the app.
+
+> **Change this immediately. Do not use in production.**
 
 | Email | Password | Role |
 |-------|----------|------|
 | admin@company.com | Admin123! | ADMIN |
-| manager@company.com | Manager123! | MANAGER |
-| viewer@company.com | Viewer123! | VIEWER |
 
 ---
 
@@ -358,10 +358,7 @@ cd server && npx prisma migrate dev
 # Open Prisma Studio (visual browser — dev only)
 npx prisma studio
 
-# Seed with demo data (wipes existing data first)
-npm run prisma:seed
-
-# Reset database and re-seed
+# Wipe all data and create a fresh default admin account
 npm run prisma:reset
 
 # Regenerate Prisma client after schema changes
@@ -526,7 +523,7 @@ pizza-box-system/
 │   │   ├── jobs/                  # Cron jobs (overdue detection, low-stock snapshots)
 │   │   ├── utils/                 # JWT, audit logger, email, Winston, invoice totals/number
 │   │   ├── __tests__/             # Jest unit tests (invoice totals, sanitize, validation)
-│   │   └── prisma/                # Seed and reset scripts
+│   │   └── prisma/                # Database reset script (wipe + create admin)
 │   └── prisma/
 │       ├── schema.prisma          # Database schema (14 models)
 │       └── migrations/            # Migration history
