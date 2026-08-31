@@ -1,6 +1,10 @@
 {
   "name": "pizza-box-client",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=20 <21",
+    "npm": ">=10 <11"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

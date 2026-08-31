@@ -1,6 +1,10 @@
 {
   "name": "pizza-box-server",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=20 <21",
+    "npm": ">=10 <11"
+  },
   "description": "Pizza Box Inventory & Invoicing System - Backend",
   "main": "dist/server.js",
   "scripts": {
