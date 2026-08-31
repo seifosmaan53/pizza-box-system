@@ -3,6 +3,7 @@
 <!--portfolio-note-->
 > **Portfolio note —** one of three invoicing builds I made to explore the same problem with different stacks. **This is the React + Express + Prisma full-stack take.** Siblings: [asset-vault](https://github.com/seifosmaan53/asset-vault) (React 19 + NestJS 11 + tRPC) and [invoiceme](https://github.com/seifosmaan53/invoiceme) (Flutter mobile + NestJS, offline-first).
 
+[![CI](https://github.com/seifosmaan53/pizza-box-system/actions/workflows/ci.yml/badge.svg)](https://github.com/seifosmaan53/pizza-box-system/actions/workflows/ci.yml)
 ![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat&logo=node.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?style=flat&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)
@@ -14,6 +15,20 @@
 A full-stack web application for managing pizza box inventory across multiple stores, generating professional PDF invoices, and tracking business analytics — with an AI assistant that has live, role-aware access to the underlying business data.
 
 **Why this exists.** My day-to-day is retail and pharmacy operations support across an 890-store footprint, where inventory counts and invoicing routinely still live in spreadsheets and hand-built PDFs. This project is my exploration of what a centralized, role-aware replacement looks like: one system where a store's stock, its invoices, and the analytics sitting on top of both stay in sync. It is a portfolio build — one of three I wrote to attack the same domain with different stacks — not a deployed product. But every layer (JWT auth, RBAC, audit logging, Dockerized Postgres/Redis, hard-failing secrets) is built the way I would ship it.
+
+---
+
+## A look at it
+
+The REST API is documented with OpenAPI at `/api-docs`, generated from annotations on
+the routes themselves so it cannot drift from the handlers:
+
+![Invoice endpoints](docs/screenshots/api-invoices.jpg)
+
+Inventory is the part that makes this more than a CRUD app — warehouse aggregation and
+low-stock thresholds sit behind the same auth as everything else:
+
+![Inventory endpoints](docs/screenshots/api-inventory.jpg)
 
 ---
 
@@ -233,7 +248,7 @@ Two test runners, split by side of the stack:
 
 | Side | Framework | Command | Covers |
 |------|-----------|---------|--------|
-| Server | Jest + ts-jest | `cd server && npm test` | Invoice money math (Decimal.js subtotal/tax/shipping/total), input-sanitization middleware (XSS + control-char stripping), password-policy schema |
+| Server | Jest + ts-jest | `cd server && npm test` | Invoice money math (Decimal.js subtotal/tax/shipping/total), input-sanitization middleware (XSS + control-char stripping), password-policy schema, **JWT issue/verify**, **audit-log diffing** |
 | Client | Vitest + Testing Library | `cd client && npm test` | Onboarding checklist component (step completion, hide-when-complete) |
 
 ```bash
@@ -242,6 +257,13 @@ cd client && npm test    # Vitest
 ```
 
 The server suite deliberately targets the pure, high-consequence logic where a silent bug is most expensive. `utils/invoiceTotals.ts` was extracted from the invoice controllers specifically so the subtotal → tax → shipping → total calculation that **both** invoice creation and update depend on can be unit-tested in isolation — including the floating-point cases (`0.1 + 0.2`) that are the reason every monetary value goes through `Decimal.js` instead of native numbers.
+
+**41 server tests, 3 client tests, all green, run on every push by CI.**
+
+The JWT suite is the one worth calling out: it proves the access and refresh tokens are
+not interchangeable in either direction, and asserts that the two signing secrets
+actually differ — without that last check the first two assertions could pass for the
+wrong reason, and a refresh token would silently be a valid access token.
 
 **Honest scope.** This is unit coverage, not end-to-end. The reserved-quantity lifecycle (quantities move into `reservedQuantity` on invoice create, deduct on send, restore on cancel) runs inside Prisma transactions in the controllers and is currently exercised by manual testing, not yet by an integration suite against a throwaway test database. Standing that integration layer up is the next thing I would add.
 
