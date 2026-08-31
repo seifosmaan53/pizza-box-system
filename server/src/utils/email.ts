@@ -15,7 +15,14 @@ const transporter =
     : null;
 
 const FROM = process.env.EMAIL_FROM || 'noreply@pizzaboxco.com';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+/* CLIENT_URL is the documented, CORS-configured origin; FRONTEND_URL was a second
+   name for the same thing that appeared only here and in auth.ts, was absent from
+   .env.example, and defaulted to port 3000 while the client actually runs on 5173.
+   The consequence was live: a deployment that sets CLIENT_URL correctly still emitted
+   password-reset links pointing at localhost:3000. FRONTEND_URL is still honoured
+   first so existing deployments that set it keep working. */
+const FRONTEND_URL =
+  process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
 
 async function sendMail(to: string, subject: string, html: string): Promise<void> {
   if (process.env.NODE_ENV !== 'production') {
