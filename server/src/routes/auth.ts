@@ -10,12 +10,16 @@ import {
   updateProfile,
 } from '../controllers/auth';
 import { authenticate, optionalAuth } from '../middleware/auth';
-import { loginRateLimiter, forgotPasswordRateLimiter } from '../middleware/rateLimiter';
+import {
+  loginRateLimiter,
+  refreshRateLimiter,
+  forgotPasswordRateLimiter,
+} from '../middleware/rateLimiter';
 
 const router = Router();
 
 router.post('/login', loginRateLimiter, login);
-router.post('/refresh', loginRateLimiter, refresh);
+router.post('/refresh', refreshRateLimiter, refresh);
 router.post('/logout', optionalAuth, logout);
 router.post('/forgot-password', forgotPasswordRateLimiter, forgotPassword);
 router.post('/reset-password/:token', resetPassword);

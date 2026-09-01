@@ -20,8 +20,39 @@ A full-stack web application for managing pizza box inventory across multiple st
 
 ## A look at it
 
-The REST API is documented with OpenAPI at `/api-docs`, generated from annotations on
-the routes themselves so it cannot drift from the handlers:
+Every screenshot below is the running app — Postgres, Redis, the API and the React
+client, with data created through the public REST API rather than inserted behind it.
+
+The dashboard is the daily view: stock on hand, what is owed, and anything that needs
+attention. The low-stock tile and the alert panel are driven by each item's own
+threshold, not a global number:
+
+![Dashboard showing 7,608 units across 3 stores and one low-stock alert](docs/screenshots/01-dashboard.jpg)
+
+Invoices carry a status lifecycle (draft → sent → paid, plus cancelled and overdue),
+and totals are computed server-side per store — each line is priced from the inventory
+item it draws down, then taxed at that store's own rate:
+
+![Invoice list with per-store totals and draft status](docs/screenshots/02-invoices.jpg)
+
+Stores own their currency, tax rate and default shipping fee, so an invoice inherits
+the right numbers instead of relying on the person filling it in:
+
+![Store list with contacts and locations](docs/screenshots/03-stores.jpg)
+
+Analytics reads from the same data over a selectable window. Revenue counts *paid*
+invoices, so the figures below are zero on purpose — every invoice here is still a
+draft, and the charts say so rather than inventing a trend:
+
+![Analytics with revenue and units-sold panels over a 30-day window](docs/screenshots/04-analytics.jpg)
+
+Sign-in is JWT-based: a short-lived access token in memory, and a rotating refresh
+token in an httpOnly cookie the page script can never read:
+
+![Sign-in screen](docs/screenshots/05-login.jpg)
+
+The REST API is also documented with OpenAPI at `/api-docs`, generated from annotations
+on the routes themselves so it cannot drift from the handlers:
 
 ![Invoice endpoints](docs/screenshots/api-invoices.jpg)
 

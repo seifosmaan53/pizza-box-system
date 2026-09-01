@@ -1,5 +1,11 @@
+import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+
+// Must run before PrismaClient is constructed: Prisma resolves DATABASE_URL at
+// construction time. server.ts does the same thing; this script is a separate
+// entrypoint, so it has to load the file itself rather than inherit from anything.
+dotenv.config();
 
 const prisma = new PrismaClient();
 

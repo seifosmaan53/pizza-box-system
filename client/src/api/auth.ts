@@ -1,4 +1,4 @@
-import api from '@/lib/axios';
+import api, { refreshSession } from '@/lib/axios';
 import type { ApiResponse, LoginRequest, LoginResponse, User } from '@/types';
 
 export const authApi = {
@@ -7,9 +7,12 @@ export const authApi = {
     return res.data.data;
   },
 
+  // Goes through the shared single-flight helper rather than posting directly: the
+  // server rotates and revokes the refresh token on every call, so two overlapping
+  // requests invalidate each other and log the user out. See refreshSession().
   refresh: async (): Promise<{ accessToken: string }> => {
-    const res = await api.post<ApiResponse<{ accessToken: string }>>('/auth/refresh');
-    return res.data.data;
+    const accessToken = await refreshSession();
+    return { accessToken };
   },
 
   logout: async (): Promise<void> => {

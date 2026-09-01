@@ -14,6 +14,42 @@ export const api = axios.create({
 // Track in-flight refresh promise to avoid parallel refresh calls
 let refreshPromise: Promise<string> | null = null;
 
+/**
+ * Refresh the session, collapsing concurrent callers onto ONE network request.
+ *
+ * This must be the only way anything refreshes. The server rotates the refresh
+ * token and blacklists the previous one on every call, so two overlapping
+ * refreshes burn each other's tokens: each is handed a fresh cookie, only the
+ * last Set-Cookie survives in the browser, and the one that survives may already
+ * have been revoked by its sibling. The next page load then sends a dead token
+ * and the user is bounced to the login screen.
+ *
+ * That is not hypothetical — it was reproducible on every reload. The guard used
+ * to live inside the response interceptor, private to this module, so the route
+ * guard's direct `authApi.refresh()` call sailed straight past it; React
+ * StrictMode double-invokes that effect in development, which made two
+ * simultaneous refreshes the normal case rather than an edge case.
+ */
+export function refreshSession(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = axios
+      .post<{ success: boolean; data: { accessToken: string } }>(
+        `${BASE_URL}/auth/refresh`,
+        {},
+        { withCredentials: true }
+      )
+      .then((res) => {
+        const newToken = res.data.data.accessToken;
+        useAuthStore.getState().setAccessToken(newToken);
+        return newToken;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
 // Request interceptor — attach Bearer token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -56,21 +92,8 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // Deduplicate concurrent refresh calls
-        if (!refreshPromise) {
-          refreshPromise = axios
-            .post<{ success: boolean; data: { accessToken: string } }>(`${BASE_URL}/auth/refresh`, {}, { withCredentials: true })
-            .then((res) => {
-              const newToken = res.data.data.accessToken;
-              useAuthStore.getState().setAccessToken(newToken);
-              return newToken;
-            })
-            .finally(() => {
-              refreshPromise = null;
-            });
-        }
-
-        const newToken = await refreshPromise;
+        // Shared with the route guard, so a retry here cannot race a boot-time refresh.
+        const newToken = await refreshSession();
         if (originalRequest.headers) {
           (originalRequest.headers as Record<string, string>)['Authorization'] = `Bearer ${newToken}`;
         } else {
