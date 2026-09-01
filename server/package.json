@@ -1,6 +1,7 @@
 {
   "name": "pizza-box-server",
   "version": "1.0.0",
+  "license": "MIT",
   "engines": {
     "node": ">=20 <21",
     "npm": ">=10 <11"
