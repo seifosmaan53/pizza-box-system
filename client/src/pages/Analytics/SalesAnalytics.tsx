@@ -45,7 +45,11 @@ export default function SalesAnalytics() {
   const byStoreQuery = useQuery({ queryKey: ['analytics', 'by-store', dateKey], queryFn: () => getSalesByStore(params) });
   const byTypeQuery = useQuery({ queryKey: ['analytics', 'by-type', dateKey], queryFn: () => getSalesByBoxType(params) });
   const bySizeQuery = useQuery({ queryKey: ['analytics', 'by-size', dateKey], queryFn: () => getSalesByBoxSize(params) });
-  const topStoresQuery = useQuery({ queryKey: ['analytics', 'top-stores'], queryFn: () => getTopStores({ limit: 10 }) });
+  // getTopStores filters by date server-side, but only if it is given a range. Without
+  // `params` the Best Performer / Needs Attention cards reported all-time winners next
+  // to windowed charts, and did not change when the range selector did. `dateKey` has
+  // to be in the queryKey too, or the first window's answer is cached for every other.
+  const topStoresQuery = useQuery({ queryKey: ['analytics', 'top-stores', dateKey], queryFn: () => getTopStores({ limit: 10, ...params }) });
   const summaryQuery = useQuery({ queryKey: ['analytics', 'summary', dateKey], queryFn: () => getInvoiceSummary(params) });
 
   const revenue = revenueQuery.data || [];

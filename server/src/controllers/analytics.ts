@@ -291,14 +291,29 @@ export async function getInventorySnapshot(_req: Request, res: Response, next: N
   } catch (err) { next(err); }
 }
 
-export async function getInvoiceSummary(_req: Request, res: Response, next: NextFunction): Promise<void> {
+/*
+ * Honours the same startDate/endDate/currency filters as every other handler here.
+ *
+ * It previously took `_req` and ignored the query string entirely, so the client sent
+ * a date range and got an all-time answer back. On the Analytics page that put an
+ * unfiltered "Paid Revenue" directly beside a filtered "Total Revenue" — with the 30d
+ * preset selected the two cards read $3,773 and $36,932, which is not a comparison a
+ * reader can make sense of.
+ */
+export async function getInvoiceSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const dateRange = getDateRange(req);
+    const currency = getCurrency(req);
     const statuses = ['DRAFT', 'SENT', 'PAID', 'CANCELLED', 'OVERDUE'] as const;
     const summary: Record<string, { count: number; value: number }> = {};
 
     for (const status of statuses) {
       const invoices = await prisma.invoice.findMany({
-        where: { status },
+        where: {
+          status,
+          ...(currency ? { currency } : {}),
+          ...(Object.keys(dateRange).length ? { issueDate: dateRange } : {}),
+        },
         select: { total: true },
       });
       summary[status] = {
