@@ -21,30 +21,38 @@ A full-stack web application for managing pizza box inventory across multiple st
 ## A look at it
 
 Every screenshot below is the running app — Postgres, Redis, the API and the React
-client, with data created through the public REST API rather than inserted behind it.
+client — populated by `npm run demo:seed` (see [Demo data](#demo-data)). Nothing is
+mocked and no figure is drawn in by hand; the seed is deterministic, so these numbers
+reproduce exactly.
 
 The dashboard is the daily view: stock on hand, what is owed, and anything that needs
 attention. The low-stock tile and the alert panel are driven by each item's own
 threshold, not a global number:
 
-![Dashboard showing 7,608 units across 3 stores and one low-stock alert](docs/screenshots/01-dashboard.jpg)
+![Dashboard showing 52,867 units across 5 stores, $12,545 outstanding and 9 low-stock alerts](docs/screenshots/01-dashboard.jpg)
 
 Invoices carry a status lifecycle (draft → sent → paid, plus cancelled and overdue),
 and totals are computed server-side per store — each line is priced from the inventory
 item it draws down, then taxed at that store's own rate:
 
-![Invoice list with per-store totals and draft status](docs/screenshots/02-invoices.jpg)
+![Invoice list with per-store subtotals, tax and paid/sent statuses](docs/screenshots/02-invoices.jpg)
 
 Stores own their currency, tax rate and default shipping fee, so an invoice inherits
 the right numbers instead of relying on the person filling it in:
 
 ![Store list with contacts and locations](docs/screenshots/03-stores.jpg)
 
-Analytics reads from the same data over a selectable window. Revenue counts *paid*
-invoices, so the figures below are zero on purpose — every invoice here is still a
-draft, and the charts say so rather than inventing a trend:
+Analytics reads from the same data over a selectable window. Revenue counts only
+invoices that have actually left draft (`PAID`, `SENT`, `OVERDUE`), so the window
+selector genuinely changes the answer rather than re-rendering the same total:
 
-![Analytics with revenue and units-sold panels over a 30-day window](docs/screenshots/04-analytics.jpg)
+![Analytics with revenue, units-sold, best-performer and per-store breakdowns over 30 days](docs/screenshots/04-analytics.jpg)
+
+Inventory is the part that makes this more than CRUD: every store holds its own stock
+of each box type and size, priced per unit, with a per-item low-stock threshold that
+drives the alerts on the dashboard:
+
+![Store inventory for one store: 15 items, 11,862 units, two below threshold](docs/screenshots/06-inventory.jpg)
 
 Sign-in is JWT-based: a short-lived access token in memory, and a rotating refresh
 token in an httpOnly cookie the page script can never read:
@@ -352,6 +360,26 @@ The reset script creates a single ADMIN account so you can log in; add any MANAG
 | Email | Password | Role |
 |-------|----------|------|
 | admin@company.com | Admin123! | ADMIN |
+
+### Demo data
+
+`prisma:reset` gives you an empty system with one admin, which is the right starting
+point for a real deployment but a poor one for looking around: analytics counts only
+invoices that have left draft, so an empty database renders every chart flat and every
+revenue figure as `0`.
+
+`demo:seed` fills it in instead — 5 stores, 5 box types across 5 sizes, 75 priced
+inventory rows and 38 invoices spread over the last four months and across all four
+statuses, so the date-range selector and the status filters both have something to act
+on. A few items are deliberately left under their low-stock threshold.
+
+```bash
+docker exec pizzabox_server npm run demo:seed   # or: cd server && npm run demo:seed
+```
+
+It is deterministic — the same run produces the same database every time, which is what
+lets the screenshots above be retaken without the numbers quietly changing. It clears
+existing data first, so do not point it at anything you care about.
 
 ---
 

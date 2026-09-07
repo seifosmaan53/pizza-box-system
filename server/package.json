@@ -15,6 +15,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:reset": "tsx src/prisma/reset.ts",
+    "demo:seed": "tsx src/prisma/demo-seed.ts",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
