@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import * as products from '../controllers/products';
 
-const router = Router();
+const router: ExpressRouter = Router();
 router.use(authenticate);
 
 router.get('/', products.getProducts);

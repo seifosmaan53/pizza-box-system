@@ -1,9 +1,9 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import { sensitiveWriteRateLimiter } from '../middleware/rateLimiter';
 import { getSettings, updateSettings } from '../controllers/settings';
 
-const router = Router();
+const router: ExpressRouter = Router();
 router.use(authenticate);
 
 router.get('/', getSettings);

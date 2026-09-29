@@ -323,8 +323,8 @@ export default function Products() {
 
   const products: Product[] = (data ?? []).filter((p) =>
     !search || p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())) ||
-    (p.category && p.category.toLowerCase().includes(search.toLowerCase()))
+    p.sku?.toLowerCase().includes(search.toLowerCase()) ||
+    p.category?.toLowerCase().includes(search.toLowerCase())
   );
 
   const openEdit = (p: Product) => {

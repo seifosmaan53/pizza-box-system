@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import {
   getInvoices,
@@ -14,7 +14,7 @@ import {
   deleteInvoice,
 } from '../controllers/invoices';
 
-const router = Router();
+const router: ExpressRouter = Router();
 router.use(authenticate);
 
 router.get('/', getInvoices);

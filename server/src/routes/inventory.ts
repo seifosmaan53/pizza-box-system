@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import multer from 'multer';
 import {
   getInventory,
@@ -20,7 +20,7 @@ import {
 import { authenticate, requireRole } from '../middleware/auth';
 import { uploadRateLimiter } from '../middleware/rateLimiter';
 
-const router = Router();
+const router: ExpressRouter = Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB

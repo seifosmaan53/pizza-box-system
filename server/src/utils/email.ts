@@ -1,20 +1,19 @@
-import nodemailer from 'nodemailer';
-import logger from './logger';
+import nodemailer from "nodemailer";
+import logger from "./logger";
 
-const transporter =
-  process.env.SMTP_HOST
-    ? nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587', 10),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      })
-    : null;
+const transporter = process.env.SMTP_HOST
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number.parseInt(process.env.SMTP_PORT || "587", 10),
+      secure: process.env.SMTP_SECURE === "true",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    })
+  : null;
 
-const FROM = process.env.EMAIL_FROM || 'noreply@pizzaboxco.com';
+const FROM = process.env.EMAIL_FROM || "noreply@pizzaboxco.com";
 /* CLIENT_URL is the documented, CORS-configured origin; FRONTEND_URL was a second
    name for the same thing that appeared only here and in auth.ts, was absent from
    .env.example, and defaulted to port 3000 while the client actually runs on 5173.
@@ -22,23 +21,31 @@ const FROM = process.env.EMAIL_FROM || 'noreply@pizzaboxco.com';
    password-reset links pointing at localhost:3000. FRONTEND_URL is still honoured
    first so existing deployments that set it keep working. */
 const FRONTEND_URL =
-  process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5173';
+  process.env.FRONTEND_URL || process.env.CLIENT_URL || "http://localhost:5173";
 
-async function sendMail(to: string, subject: string, html: string): Promise<void> {
-  if (process.env.NODE_ENV !== 'production') {
-    logger.info('Email (dev)', { to, subject });
+async function sendMail(
+  to: string,
+  subject: string,
+  html: string,
+): Promise<void> {
+  if (process.env.NODE_ENV !== "production") {
+    logger.info("Email (dev)", { to, subject });
   }
 
   if (!transporter) {
-    logger.warn('SMTP not configured — email not sent', { to, subject });
+    logger.warn("SMTP not configured — email not sent", { to, subject });
     return;
   }
 
   try {
     await transporter.sendMail({ from: FROM, to, subject, html });
-    logger.info('Email sent', { to, subject });
+    logger.info("Email sent", { to, subject });
   } catch (err) {
-    logger.error('Failed to send email', { to, subject, error: (err as Error).message });
+    logger.error("Failed to send email", {
+      to,
+      subject,
+      error: (err as Error).message,
+    });
   }
 }
 
@@ -64,9 +71,11 @@ function emailWrapper(title: string, body: string): string {
 export async function sendPasswordResetEmail(
   to: string,
   resetLink: string,
-  firstName: string
+  firstName: string,
 ): Promise<void> {
-  const html = emailWrapper('Reset Your Password', `
+  const html = emailWrapper(
+    "Reset Your Password",
+    `
     <p style="color: #374151;">Hi ${firstName},</p>
     <p style="color: #374151;">We received a request to reset your password. Click the button below to set a new one:</p>
     <p style="text-align: center; margin: 32px 0;">
@@ -76,13 +85,14 @@ export async function sendPasswordResetEmail(
       </a>
     </p>
     <p style="color: #6b7280; font-size: 14px;">This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
-  `);
+  `,
+  );
 
-  if (process.env.NODE_ENV !== 'production') {
-    logger.info('Password reset link (dev)', { to, resetLink });
+  if (process.env.NODE_ENV !== "production") {
+    logger.info("Password reset link (dev)", { to, resetLink });
   }
 
-  await sendMail(to, 'Reset your password – Pizza Box Manager', html);
+  await sendMail(to, "Reset your password – Pizza Box Manager", html);
 }
 
 // ─── Invoice Sent ────────────────────────────────────────────────────────────
@@ -100,8 +110,13 @@ interface InvoiceEmailData {
   notes?: string | null;
 }
 
-export async function sendInvoiceEmail(to: string, data: InvoiceEmailData): Promise<void> {
-  const html = emailWrapper(`Invoice ${data.invoiceNumber}`, `
+export async function sendInvoiceEmail(
+  to: string,
+  data: InvoiceEmailData,
+): Promise<void> {
+  const html = emailWrapper(
+    `Invoice ${data.invoiceNumber}`,
+    `
     <p style="color: #374151;">Hi ${data.contactName || data.storeName},</p>
     <p style="color: #374151;">A new invoice has been issued for your account.</p>
     <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
@@ -126,20 +141,33 @@ export async function sendInvoiceEmail(to: string, data: InvoiceEmailData): Prom
         <td style="padding: 12px 0; text-align: right; font-size: 18px; font-weight: 700; color: #dc2626; border-top: 2px solid #e5e7eb;">$${data.total}</td>
       </tr>
     </table>
-    ${data.notes ? `<p style="color: #6b7280; font-size: 13px; background: #f9fafb; padding: 12px; border-radius: 8px; margin-top: 16px;"><strong>Note:</strong> ${data.notes}</p>` : ''}
+    ${data.notes ? `<p style="color: #6b7280; font-size: 13px; background: #f9fafb; padding: 12px; border-radius: 8px; margin-top: 16px;"><strong>Note:</strong> ${data.notes}</p>` : ""}
     <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">Please process payment by the due date. If you have questions, contact us.</p>
-  `);
+  `,
+  );
 
-  await sendMail(to, `Invoice ${data.invoiceNumber} – Payment Due ${data.dueDate}`, html);
+  await sendMail(
+    to,
+    `Invoice ${data.invoiceNumber} – Payment Due ${data.dueDate}`,
+    html,
+  );
 }
 
 // ─── Invoice Paid ────────────────────────────────────────────────────────────
 
 export async function sendInvoicePaidEmail(
   to: string,
-  data: { invoiceNumber: string; storeName: string; contactName: string; total: string; paidDate: string }
+  data: {
+    invoiceNumber: string;
+    storeName: string;
+    contactName: string;
+    total: string;
+    paidDate: string;
+  },
 ): Promise<void> {
-  const html = emailWrapper('Payment Received', `
+  const html = emailWrapper(
+    "Payment Received",
+    `
     <p style="color: #374151;">Hi ${data.contactName || data.storeName},</p>
     <div style="text-align: center; margin: 24px 0;">
       <div style="display: inline-block; background: #dcfce7; border-radius: 50%; padding: 12px;">
@@ -158,7 +186,8 @@ export async function sendInvoicePaidEmail(
       </tr>
     </table>
     <p style="color: #6b7280; font-size: 14px;">Thank you for your prompt payment!</p>
-  `);
+  `,
+  );
 
   await sendMail(to, `Payment Received – Invoice ${data.invoiceNumber}`, html);
 }
@@ -167,9 +196,18 @@ export async function sendInvoicePaidEmail(
 
 export async function sendOverdueReminderEmail(
   to: string,
-  data: { invoiceNumber: string; storeName: string; contactName: string; total: string; dueDate: string; daysOverdue: number }
+  data: {
+    invoiceNumber: string;
+    storeName: string;
+    contactName: string;
+    total: string;
+    dueDate: string;
+    daysOverdue: number;
+  },
 ): Promise<void> {
-  const html = emailWrapper('Payment Overdue', `
+  const html = emailWrapper(
+    "Payment Overdue",
+    `
     <p style="color: #374151;">Hi ${data.contactName || data.storeName},</p>
     <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 16px 0;">
       <p style="color: #dc2626; margin: 0; font-weight: 600;">Invoice ${data.invoiceNumber} is ${data.daysOverdue} day(s) overdue</p>
@@ -185,7 +223,12 @@ export async function sendOverdueReminderEmail(
       </tr>
     </table>
     <p style="color: #374151;">Please process payment at your earliest convenience. If you've already sent payment, please disregard this notice.</p>
-  `);
+  `,
+  );
 
-  await sendMail(to, `OVERDUE: Invoice ${data.invoiceNumber} – $${data.total}`, html);
+  await sendMail(
+    to,
+    `OVERDUE: Invoice ${data.invoiceNumber} – $${data.total}`,
+    html,
+  );
 }

@@ -73,7 +73,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     // Find user
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
-    if (!user || !user.isActive) {
+    if (!user?.isActive) {
       // Increment attempts even for non-existent users to prevent enumeration
       await redis.multi()
         .incr(lockKey)
@@ -167,7 +167,7 @@ export async function refresh(req: Request, res: Response, next: NextFunction): 
 
     const user = await prisma.user.findUnique({ where: { id: payload.userId } });
 
-    if (!user || !user.isActive) {
+    if (!user?.isActive) {
       throw new AppError('User not found or inactive', 401, 'AUTH_INVALID_CREDENTIALS');
     }
 
@@ -241,7 +241,7 @@ export async function forgotPassword(req: Request, res: Response, next: NextFunc
 
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
-    if (!user || !user.isActive) {
+    if (!user?.isActive) {
       res.json(successResponse);
       return;
     }
@@ -356,7 +356,7 @@ export async function getMe(req: Request, res: Response, next: NextFunction): Pr
       },
     });
 
-    if (!user || !user.isActive) {
+    if (!user?.isActive) {
       throw new AppError('User not found', 404, 'NOT_FOUND');
     }
 
@@ -376,7 +376,7 @@ export async function changePassword(req: Request, res: Response, next: NextFunc
 
     const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
 
-    if (!user || !user.isActive) {
+    if (!user?.isActive) {
       throw new AppError('User not found', 404, 'NOT_FOUND');
     }
 
@@ -416,7 +416,7 @@ export async function updateProfile(req: Request, res: Response, next: NextFunct
     const data = updateProfileSchema.parse(req.body);
 
     const existing = await prisma.user.findUnique({ where: { id: req.user.userId } });
-    if (!existing || !existing.isActive) {
+    if (!existing?.isActive) {
       throw new AppError('User not found', 404, 'NOT_FOUND');
     }
 

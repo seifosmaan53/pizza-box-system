@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import {
   getBoxSizes,
   getBoxSizeById,
@@ -10,7 +10,7 @@ import {
 } from '../controllers/boxSizes';
 import { authenticate, requireRole } from '../middleware/auth';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.use(authenticate);
 

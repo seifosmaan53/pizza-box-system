@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import { authenticate } from '../middleware/auth';
 import {
   getSalesByStore,
@@ -11,7 +11,7 @@ import {
   getInvoiceSummary,
 } from '../controllers/analytics';
 
-const router = Router();
+const router: ExpressRouter = Router();
 router.use(authenticate);
 
 router.get('/sales-by-store', getSalesByStore);

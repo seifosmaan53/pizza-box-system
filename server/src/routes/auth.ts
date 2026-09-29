@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import {
   login,
   refresh,
@@ -16,7 +16,7 @@ import {
   forgotPasswordRateLimiter,
 } from '../middleware/rateLimiter';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.post('/login', loginRateLimiter, login);
 router.post('/refresh', refreshRateLimiter, refresh);

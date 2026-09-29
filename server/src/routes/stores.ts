@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import {
   getStores,
   getStoreById,
@@ -11,7 +11,7 @@ import {
 } from '../controllers/stores';
 import { authenticate, requireRole } from '../middleware/auth';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.use(authenticate);
 

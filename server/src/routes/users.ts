@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import {
   getUsers,
   getUserById,
@@ -11,7 +11,7 @@ import {
 import { authenticate, requireRole } from '../middleware/auth';
 import { sensitiveWriteRateLimiter } from '../middleware/rateLimiter';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.use(authenticate, requireRole('ADMIN'));
 
